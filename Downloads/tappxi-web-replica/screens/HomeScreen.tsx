@@ -98,7 +98,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigateTo }) => {
     const formattedDate = today.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
 
     return (
-        <div className="bg-zinc-950 p-4 space-y-6">
+        <div className="bg-zinc-950 px-2 py-4 space-y-6">
             <header className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
                     <AnimatedIcon3D><TaxiIcon /></AnimatedIcon3D>
@@ -113,10 +113,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigateTo }) => {
                  <div className="text-center text-zinc-400">Cargando datos...</div>
             ) : (
                 <>
-                    <section className="flex flex-row gap-2">
-                        <InfoBox icon={<TrendingUpIcon />} title="Ingresos" value={`${ingresos.toFixed(2)}€`} color="#00CFFF" />
-                        <InfoBox icon={<TrendingDownIcon />} title="Gastos" value={`${gastos.toFixed(2)}€`} color="#FF00D6" />
-                        <InfoBox icon={<WalletIcon />} title="Balance" value={`${balance.toFixed(2)}€`} color="#00FFB0" />
+                    <section className="flex flex-row gap-1.5">
+                        <InfoBox icon={<TrendingUpIcon />} title="Ingresos" value={`${ingresos.toFixed(2)}`} color="#00CFFF" />
+                        <InfoBox icon={<TrendingDownIcon />} title="Gastos" value={`${gastos.toFixed(2)}`} color="#FF00D6" />
+                        <InfoBox icon={<WalletIcon />} title="Balance" value={`${balance.toFixed(2)}`} color="#00FFB0" />
                     </section>
 
                     {turnoActivo ? (
@@ -188,7 +188,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigateTo }) => {
                 </>
             )}
 
-            <section className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <section className="grid grid-cols-4 gap-1.5">
                 {quickActions.map((action, index) => (
                     <QuickActionTile key={index} icon={action.icon} label={action.label} onClick={action.action} />
                 ))}
