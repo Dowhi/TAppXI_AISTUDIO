@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FamilySync">
+  <title>FamilySync - Calendario Familiar</title>
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-size: 90%;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1B5E20, #2E7D32, #388E3C);
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      overflow: hidden;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .header {
+      padding: 4px 0;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin: 0 auto 4px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .users-container {
+      width: 100%;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .users-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .user-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 50px;
+      touch-action: manipulation;
+    }
+
+    .user-card:active {
+      transform: scale(0.96);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .user-card.selected {
+      background: rgba(255, 255, 255, 0.25);
+      border: 2px solid white;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .user-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 2px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-name {
+      font-size: 10px;
+      font-weight: 400;
+      text-align: center;
+    }
+
+    .check-icon {
+      margin-top: 1px;
+      font-size: 9px;
+    }
+
+    .current-user {
+      padding: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .current-user-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .current-user-name {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .current-user-id {
+      font-size: 9px;
+      opacity: 0.8;
+    }
+
+    .instruction {
+      font-size: 11px;
+      opacity: 0.7;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .go-button {
+      width: 100%;
+      max-width: 220px;
+      padding: 8px;
+      background: white;
+      color: #1B5E20;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 3px auto;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      display: block;
+    }
+
+    .go-button:active {
+      transform: scale(0.97);
+      background: #f5f5f5;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 6px 0;
+    }
+
+    .footer-text {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-bottom: 2px;
+    }
+
+    .footer-note {
+      font-size: 9px;
+      opacity: 0.6;
+    }
+
+    .debug {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px;
+      border-radius: 5px;
+      font-size: 9px;
+      z-index: 9999;
+      display: none;
+    }
+  </style>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <div id="debug" class="debug"></div>
+  
+  <div class="container">
+    <div class="header">
+      <div class="logo">📅</div>
+      <h1>Calendario Familiar</h1>
+    </div>
+
+    <div class="main">
+      <div class="title">Selecciona tu usuario</div>
+
+      <div class="users-container">
+        <div class="users-grid" id="usersGrid"></div>
+        <div class="current-user" id="currentUserInfo"></div>
+      </div>
+
+        <button class="go-button" id="goButton">Ir al Calendario →</button>
+    </div>
+
+    <div class="footer">
+      <div class="footer-text" id="footerText">Usuario actual: Usuario 1</div>
+      <div class="footer-note">Todos los eventos son compartidos entre usuarios</div>
+    </div>
+  </div>
+
+  <script>
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+      authDomain: "apptaxi-f2190.firebaseapp.com",
+      projectId: "apptaxi-f2190",
+      storageBucket: "apptaxi-f2190.firebasestorage.app",
+      messagingSenderId: "804273724178",
+      appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+      measurementId: "G-3D8R30TYTM"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Usuarios por defecto
+    const defaultUsers = [
+      { id: 1, name: 'Juan Carlos', color: '#2196F3' },
+      { id: 2, name: 'Usuario 2', color: '#4CAF50' },
+      { id: 3, name: 'Usuario 3', color: '#FF9800' },
+      { id: 4, name: 'Usuario 4', color: '#9C27B0' }
+    ];
+
+    let users = [];
+    let currentUserId = parseInt(localStorage.getItem('current_user_id')) || 1;
+    let isFirebaseConnected = false;
+
+    // Inicializar aplicación
+    async function init() {
+      try {
+        // Intentar conectar a Firebase
+        await db.collection('users').limit(1).get();
+        isFirebaseConnected = true;
+        console.log('✅ Conectado a Firebase');
+        
+        // Cargar usuarios desde Firebase
+        await loadUsersFromFirebase();
+      } catch (error) {
+        console.warn('⚠️ Firebase no disponible, usando usuarios locales:', error);
+        isFirebaseConnected = false;
+        users = [...defaultUsers];
+        await saveUsersToFirebase(); // Intentar guardar usuarios por defecto
+      }
+      
+      renderUsers();
+    }
+
+    // Cargar usuarios desde Firebase
+    async function loadUsersFromFirebase() {
+      try {
+        const snapshot = await db.collection('users').get();
+        
+        if (snapshot.empty) {
+          // Si no hay usuarios en Firebase, usar los por defecto
+          users = [...defaultUsers];
+          await saveUsersToFirebase();
+        } else {
+          // Cargar usuarios desde Firebase
+          users = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Usar el ID del documento si no está en los datos
+            const userId = data.id !== undefined ? parseInt(data.id) : parseInt(doc.id);
+            return {
+              id: userId,
+              name: data.name || `Usuario ${doc.id}`,
+              color: data.color || '#9E9E9E'
+            };
+          });
+          console.log('✅ Usuarios cargados desde Firebase:', users.length);
+        }
+      } catch (error) {
+        console.error('❌ Error cargando usuarios:', error);
+        users = [...defaultUsers];
+      }
+    }
+
+    // Guardar usuarios en Firebase
+    async function saveUsersToFirebase() {
+      if (!isFirebaseConnected) return;
+
+      try {
+        // Limpiar usuarios existentes
+        const snapshot = await db.collection('users').get();
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        // Guardar usuarios actuales
+        for (const user of users) {
+          await db.collection('users').doc(user.id.toString()).set({
+            id: user.id,
+            name: user.name,
+            color: user.color,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        console.log('✅ Usuarios guardados en Firebase');
+      } catch (error) {
+        console.error('❌ Error guardando usuarios:', error);
+      }
+    }
+
+    // Actualizar usuario en Firebase
+    async function updateUserInFirebase(userId, userData) {
+      if (!isFirebaseConnected) return;
+
+      try {
+        // Validar que userId no sea undefined
+        if (userId === undefined || userId === null) {
+          console.warn('⚠️ userId no válido:', userId);
+          return;
+        }
+        
+        const docId = String(userId);
+        await db.collection('users').doc(docId).set({
+          ...userData,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        console.log('✅ Usuario actualizado en Firebase:', docId);
+      } catch (error) {
+        console.error('❌ Error actualizando usuario:', error);
+      }
+    }
+
+    function renderUsers() {
+      const grid = document.getElementById('usersGrid');
+      grid.innerHTML = '';
+      users.forEach(user => {
+        const card = document.createElement('div');
+        card.className = 'user-card' + (user.id === currentUserId ? ' selected' : '');
+        card.addEventListener('click', () => selectUser(user.id));
+
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.style.backgroundColor = user.id === currentUserId ? 'white' : user.color;
+        avatar.style.color = user.id === currentUserId ? user.color : 'white';
+        avatar.textContent = user.name[0];
+
+        const name = document.createElement('div');
+        name.className = 'user-name';
+        name.textContent = user.name;
+
+        card.append(avatar, name);
+        if (user.id === currentUserId) {
+          const check = document.createElement('div');
+          check.className = 'check-icon';
+          check.textContent = '✓';
+          card.appendChild(check);
+        }
+        grid.appendChild(card);
+      });
+      updateCurrentUserInfo();
+    }
+
+    function updateCurrentUserInfo() {
+      const user = users.find(u => u.id === currentUserId);
+      if (!user) {
+        console.warn('⚠️ Usuario no encontrado:', currentUserId);
+        return;
+      }
+      
+      const info = document.getElementById('currentUserInfo');
+      const userId = user.id !== undefined && user.id !== null ? user.id : 'N/A';
+      info.innerHTML = `
+        <div class="current-user-avatar" style="background-color:${user.color}">${user.name[0]}</div>
+        <div>
+          <div class="current-user-name">${user.name}</div>
+          <div class="current-user-id">Usuario ${userId}</div>
+        </div>
+        <div style="font-size:14px;">✓</div>`;
+      document.getElementById('footerText').textContent = 'Usuario actual: ' + user.name;
+    }
+
+    async function selectUser(userId) {
+      // Validar userId
+      if (userId === undefined || userId === null) {
+        console.error('❌ ID de usuario inválido:', userId);
+        return;
+      }
+      
+      currentUserId = userId;
+      localStorage.setItem('current_user_id', String(userId));
+      
+      // Actualizar en Firebase si está conectado
+      if (isFirebaseConnected) {
+        await updateUserInFirebase(userId, { lastSelected: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      
+      renderUsers();
+    }
+
+    document.getElementById('goButton').addEventListener('click', () => {
+      window.location.href = 'calendar.html';
+    });
+
+    // Inicializar cuando se carga la página
+    init();
+  </script>
+</body>
+</html>

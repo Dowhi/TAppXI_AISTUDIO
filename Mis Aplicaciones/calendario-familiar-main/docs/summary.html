@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- PWA/iOS fullscreen to evitar abrir Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#1B5E20" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
+    <title>Resumen - FamilySync</title>
+    <style>
+        body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background: #f5f5f5; transition: background 0.3s, color 0.3s; }
+        .app-header { display: flex; align-items: center; justify-content: space-between; background: #1B5E20; color: #fff; padding: 8px 12px; padding-top: max(8px, calc(env(safe-area-inset-top) + 8px)); min-height: 48px; }
+        .app-header .seg { display: flex; gap: 12px; align-items: center; }
+        .seg .chip { background: transparent; color: #9fc1ff; font-weight: 800; letter-spacing: .5px; }
+        .title { font-weight: 900; letter-spacing: 1px; }
+
+        .tabs { display: flex; gap: 8px; background: #f5f5f5; padding: 10px; }
+        .tab { flex: 1; text-align: center; padding: 8px 0; border-radius: 16px; font-weight: 700; border: 1px solid #cfd8e3; background: #fff; color: #1B5E20; }
+        .tab.active { background: #1976D2; color: #fff; border-color: #1976D2; }
+
+        .section { background: #f7f9fc; border: 1px solid #cfd8e3; border-radius: 10px; margin: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+        .section .header { background: #ffffff; color: #6b7c8f; font-weight: 900; text-align: center; padding: 8px 0; border-bottom: 1px solid #e1e7ef; letter-spacing: .5px; }
+        .pill-tabs { display: flex; margin: 10px; border: 1px solid #cfd8e3; border-radius: 16px; overflow: hidden; background:#fff; }
+        .pill { flex: 1; text-align: center; padding: 8px 0; font-weight: 800; background: #fff; color: #6b7c8f; cursor: pointer; user-select: none; }
+        .pill.active { background: #1B5E20; color: #fff; }
+        .pill:active { opacity: 0.8; }
+
+        .list { margin: 10px; background:#fff; border: 1px solid #dde5ee; border-radius: 8px; overflow: hidden; }
+        .list .item { padding: 8px 10px; border-bottom: 1px solid #eef3f9; }
+        .list .item:last-child { border-bottom: none; }
+        .list .date { font-weight: 900; }
+        .list .text { margin-top: 4px; white-space: pre-wrap; }
+        .list .footer { text-align: center; color: #6b7c8f; font-weight: 700; padding: 6px; background: #fafcff; }
+
+        .search-box { margin: 10px; display: grid; gap: 8px; }
+        .search-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+        .input { background: #fff; border: 1px solid #cfd8e3; border-radius: 12px; padding: 12px; font-size: 14px; }
+        .btn { background: #1B5E20; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .note-table { background: #fff; border: 1px solid #dde5ee; border-radius: 8px; padding: 10px; color: #6b7c8f; }
+        .icon-results-list { background: #fff; border: 1px solid #dde5ee; border-radius: 8px; overflow: hidden; }
+        .icon-results-list .result-item { padding: 12px 16px; border-bottom: 1px solid #eef3f9; }
+        .icon-results-list .result-item:last-child { border-bottom: none; }
+        .icon-results-list .result-date { font-weight: 900; font-size: 16px; color: #1B5E20; margin-bottom: 4px; cursor: pointer; }
+        .icon-results-list .result-event { font-size: 14px; color: #6b7c8f; margin-top: 2px; }
+
+        .switch-row { display: flex; align-items: center; gap: 8px; padding: 10px; }
+        .switch-row .switch { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cfd8e3; border-radius: 6px; background: #fff; }
+        .icon-picker { margin: 0 10px 10px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+        .select { background:#fff; border:1px solid #cfd8e3; border-radius:12px; padding:10px; font-size:14px; }
+        .filters { margin: 0 10px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .stats { margin: 10px; background: #fff; border: 1px solid #cfd8e3; border-radius: 10px; }
+        .stats .tabs { padding: 10px; }
+        .date-range { display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; gap: 8px; padding: 0 12px 12px; }
+        .date-chip { padding: 8px 10px; border: 1px solid #cfd8e3; background: #fff; border-radius: 12px; font-weight: 800; text-align: center; }
+        .arrow { width: 34px; height: 28px; border: none; border-radius: 8px; background: #eef3f9; color: #1B5E20; font-weight: 900; }
+        .table { margin: 10px; border: 1px solid #e1e7ef; border-radius: 8px; overflow: hidden; }
+        .row { display: grid; grid-template-columns: 1fr 70px 80px 50px; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid #eef3f9; }
+        .row.header { background: #eef3f9; font-weight: 900; color: #6b7c8f; }
+        .badge { padding: 6px 8px; border-radius: 6px; color: #fff; font-weight: 800; text-align: center; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15); }
+        .row .center { text-align: center; }
+        .global { text-align: right; font-style: italic; padding: 8px 10px; color: #1B5E20; }
+        
+        /* Dark Theme Styles */
+        body.dark-theme { background: #1a1a1a; color: #e0e0e0; }
+        body.dark-theme .app-header { background: #0D47A1; border-bottom: 1px solid #0a3470; }
+        body.dark-theme .tabs { background: #1a1a1a; }
+        body.dark-theme .tab { background: #2a2a2a; color: #e0e0e0; border-color: #3a3a3a; }
+        body.dark-theme .tab.active { background: #1976D2; color: #fff; border-color: #1976D2; }
+        body.dark-theme .section { background: #2a2a2a; border-color: #3a3a3a; }
+        body.dark-theme .section .header { background: #333; color: #b0b0b0; border-bottom-color: #3a3a3a; }
+        body.dark-theme .pill-tabs { background: #2a2a2a; border-color: #3a3a3a; }
+        body.dark-theme .pill { background: #2a2a2a; color: #b0b0b0; }
+        body.dark-theme .pill.active { background: #1B5E20; color: #fff; }
+        body.dark-theme .list { background: #2a2a2a; border-color: #3a3a3a; }
+        body.dark-theme .list .item { border-bottom-color: #3a3a3a; color: #e0e0e0; }
+        body.dark-theme .list .footer { background: #1f1f1f; color: #b0b0b0; }
+        body.dark-theme .input { background: #2a2a2a; border-color: #3a3a3a; color: #e0e0e0; }
+        body.dark-theme .btn { background: #1B5E20; }
+        body.dark-theme .note-table { background: #2a2a2a; border-color: #3a3a3a; color: #b0b0b0; }
+        body.dark-theme .icon-results-list { background: #2a2a2a; border-color: #3a3a3a; }
+        body.dark-theme .icon-results-list .result-item { border-bottom-color: #3a3a3a; }
+        body.dark-theme .icon-results-list .result-date { color: #4CAF50; }
+        body.dark-theme .icon-results-list .result-event { color: #b0b0b0; }
+        body.dark-theme .switch-row .switch { background: #2a2a2a; border-color: #3a3a3a; }
+        body.dark-theme .select { background: #2a2a2a; border-color: #3a3a3a; color: #e0e0e0; }
+        body.dark-theme .stats { background: #2a2a2a; border-color: #3a3a3a; }
+        body.dark-theme .date-chip { background: #2a2a2a; border-color: #3a3a3a; color: #e0e0e0; }
+        body.dark-theme .arrow { background: #333; color: #4CAF50; }
+        body.dark-theme .table { border-color: #3a3a3a; }
+        body.dark-theme .row { border-bottom-color: #3a3a3a; color: #e0e0e0; }
+        body.dark-theme .row.header { background: #333; color: #b0b0b0; }
+        body.dark-theme .global { color: #4CAF50; }
+        
+        /* Auto dark mode */
+        @media (prefers-color-scheme: dark) {
+            body:not(.light-theme) { background: #1a1a1a; color: #e0e0e0; }
+            body:not(.light-theme) .app-header { background: #0D47A1; }
+            body:not(.light-theme) .tabs { background: #1a1a1a; }
+            body:not(.light-theme) .tab { background: #2a2a2a; color: #e0e0e0; border-color: #3a3a3a; }
+            body:not(.light-theme) .tab.active { background: #1976D2; color: #fff; }
+            body:not(.light-theme) .section { background: #2a2a2a; border-color: #3a3a3a; }
+            body:not(.light-theme) .section .header { background: #333; color: #b0b0b0; }
+            body:not(.light-theme) .pill { background: #2a2a2a; color: #b0b0b0; }
+            body:not(.light-theme) .pill.active { background: #1B5E20; color: #fff; }
+            body:not(.light-theme) .list { background: #2a2a2a; border-color: #3a3a3a; }
+            body:not(.light-theme) .input, body:not(.light-theme) .select { background: #2a2a2a; border-color: #3a3a3a; color: #e0e0e0; }
+            body:not(.light-theme) .stats, body:not(.light-theme) .date-chip { background: #2a2a2a; border-color: #3a3a3a; }
+            body:not(.light-theme) .arrow { background: #333; color: #4CAF50; }
+            body:not(.light-theme) .row.header { background: #333; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header" style="justify-content: space-between; align-items: center;">
+        <button class="btn" onclick="goCalendar()" style="background:#1B5E20;border:1px solid #0F4C14; padding: 6px 12px; font-size: 18px;">◀</button>
+        <div class="title">ESTADÍSTICAS</div>
+        <div style="width: 50px;"></div> <!-- Spacer para centrar el título -->
+    </div>
+
+    <div class="section stats">
+        <div class="tabs">
+            <button class="tab active" id="tabMonth">Mes</button>
+            <button class="tab" id="tabYear">Año</button>
+            <button class="tab" id="tabRange">Rango</button>
+        </div>
+        <div class="date-range" id="rangeControls">
+            <button class="arrow" id="fromPrev">‹</button>
+            <div class="date-chip" id="fromChip">1/8/25</div>
+            <button class="arrow" id="toNext">›</button>
+            <div class="date-chip" id="toChip">31/8/25</div>
+            <span></span>
+        </div>
+        <div class="table" id="statsTable">
+            <div class="row header"><div>Turnos</div><div class="center">Cantidad</div><div class="center">Tiempo</div><div class="center">Global</div></div>
+            <!-- rows here -->
+        </div>
+        <div class="global" id="statsGlobal">Global: 0 Turnos 0h,0m</div>
+    </div>
+
+    <div class="section">
+        <div class="header">NOTAS CERCANAS (30 DÍAS)</div>
+        <div class="pill-tabs">
+            <div class="pill" id="tabPast" style="cursor: pointer;" onclick="togglePastNext(true)">Pasadas</div>
+            <div class="pill active" id="tabNext" style="cursor: pointer;" onclick="togglePastNext(false)">Próximas</div>
+        </div>
+        <div class="list" id="nearNotes">
+            <div class="item" style="display:none"></div>
+            <div class="footer" id="nearNotesFooter">0 notas cercanas</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="header">BUSCAR EN NOTAS</div>
+        <div class="search-box">
+            <div class="search-row">
+                <input id="searchInput" class="input" placeholder="" />
+                <button class="btn" id="searchBtn">BUSCAR</button>
+            </div>
+            <div class="note-table" id="searchResult">No hay datos para mostrar</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="header">BUSCAR DÍAS POR ICONO</div>
+        <div class="switch-row">
+            <span class="switch">🔁</span>
+            <label><input type="checkbox" id="pastDaysToggle" /> Días pasados</label>
+        </div>
+        <div class="icon-picker">
+            <select id="iconPicker" class="select">
+                <option value="">Selecciona un icono…</option>
+                <option>⭐</option>
+                <option>❤️</option>
+                <option>🏥</option>
+                <option>📞</option>
+                <option>⚽</option>
+                <option>🎂</option>
+                <option>🔔</option>
+                <option>🛒</option>
+                <option>🐶</option>
+                <option>✈️</option>
+            </select>
+            <button class="btn" id="iconSearchBtn">BUSCAR</button>
+        </div>
+        <div class="filters">
+            <select id="shiftFilter" class="select">
+                <option value="">Todos los turnos</option>
+            </select>
+            <select id="userFilter" class="select">
+                <option value="">Todos los autores</option>
+            </select>
+        </div>
+        <div style="display:flex; gap:8px; margin: 0 10px 10px;">
+            <button class="btn" id="clearFiltersBtn" style="background:#6b7c8f">Limpiar filtros</button>
+        </div>
+        <div class="icon-results-list" id="iconSearchResult" style="display: none;"></div>
+        <div class="note-table" id="iconSearchResultEmpty">No se han encontrado días con el icono seleccionado</div>
+    </div>
+
+    <script>
+        // Config Firebase (mismo de calendar.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        let db = null; let isFirebaseConnected = false;
+        let shiftTemplates = [];
+        const usersIndex = new Map(); // userId -> name/color
+
+        function goCalendar(){ window.location.href = 'calendar.html'; }
+
+        async function initFirebase(){
+            try {
+                if (!firebase.apps?.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore(); isFirebaseConnected = true;
+            } catch(e){ console.warn('Firebase init fallback', e); isFirebaseConnected = false; }
+        }
+
+        async function loadShiftTemplates(){
+            try {
+                if (!isFirebaseConnected) return;
+                const snap = await db.collection('shifts').get();
+                shiftTemplates = snap.docs.map(d => ({id:d.id, ...d.data()}));
+            } catch(e){ shiftTemplates = []; }
+        }
+
+        async function loadUsers(){
+            try{
+                if (!isFirebaseConnected) return;
+                const snap = await db.collection('users').get();
+                snap.docs.forEach(d=>{ const u=d.data(); usersIndex.set(parseInt(u.id)||parseInt(d.id), u.name||`Usuario ${d.id}`); });
+            }catch(e){ /* opcional */ }
+        }
+
+        function formatDateKey(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}`; }
+        function parseKey(k){ const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d); }
+        function asHhMm(totalMin){ const h=Math.floor(totalMin/60), m=totalMin%60; return `${h}h,${m}m`; }
+        const normalize = s => (s||'').toString().trim();
+        const normalizeIcon = s => normalize(s).normalize('NFKC').replace(/\uFE0F/g,'');
+
+        const statsCache = new Map(); // key: from_to -> { map, acc, at }
+        const cacheKey = (a,b)=> `${formatDateKey(a)}_${formatDateKey(b)}`;
+        const FILTERS_KEY = 'summary_filters_v1';
+        const selectedShifts = new Set(); // Turnos seleccionados para incluir en el global
+
+        async function getEventsForRange(d1,d2){
+            const key=cacheKey(d1,d2);
+            if (statsCache.has(key)) return statsCache.get(key).map;
+            const out = {};
+            if (isFirebaseConnected){
+                const ops=[]; const cur=new Date(d1);
+                while(cur<=d2){ const key=formatDateKey(cur); ops.push(db.collection('calendar_events').doc(key).get().then(doc=>{ out[key]=doc.exists?(doc.data().events||[]):[]; })); cur.setDate(cur.getDate()+1); }
+                await Promise.all(ops);
+            } else {
+                const all = JSON.parse(localStorage.getItem('calendar_events')||'{}');
+                const cur=new Date(d1);
+                while(cur<=d2){ const key=formatDateKey(cur); out[key]=all[key]||[]; cur.setDate(cur.getDate()+1); }
+            }
+            statsCache.set(key, { map: out, acc: null, at: Date.now() });
+            return out;
+        }
+
+        function daysAroundNotes(map, now, past=false){
+            const res=[]; const limit=30; const cmp = past? (d)=> d < now : (d)=> d >= now;
+            Object.entries(map).forEach(([k,events])=>{
+                const d=parseKey(k); if(!cmp(d)) return; const diff=Math.ceil((d-now)/(1000*60*60*24)); const adiff=Math.abs(diff);
+                const note=events.find(e=>e.type==='note' && e.text && e.text.trim()!=='');
+                if(note && adiff<=limit){ res.push({date:d, text:note.text}); }
+            });
+            res.sort((a,b)=> past? b.date-a.date : a.date-b.date);
+            return res;
+        }
+
+        function renderNearNotes(map){
+            const now=new Date();
+            const container=document.getElementById('nearNotes');
+            const footer=document.getElementById('nearNotesFooter');
+            container.querySelectorAll('.item').forEach(el=>el.remove());
+            const past=daysAroundNotes(map, now, document.getElementById('tabPast').classList.contains('active'));
+            past.slice(0,20).forEach(n=>{
+                const row=document.createElement('div'); row.className='item';
+                const day=n.date.getDate(), mo=n.date.getMonth()+1, yy=String(n.date.getFullYear()).slice(-2);
+                row.innerHTML=`<div class="date">${day}/${mo}/${yy}</div><div class="text">${n.text}</div>`;
+                container.insertBefore(row, footer);
+            });
+            footer.textContent=`${past.length} notas cercanas`;
+        }
+
+        function computeStats(map){
+            // Acumula por turno (text/shiftId) y calcula duración usando timeSlots si existen
+            const acc={};
+            Object.values(map).forEach(events=>{
+                events.filter(e=>e.type!=='note').forEach(e=>{
+                    const key=e.shiftId||e.text||'Turno';
+                    if(!acc[key]) acc[key]={count:0, mins:0, sample:e};
+                    acc[key].count++;
+                    // Duración
+                    const tmpl = shiftTemplates.find(t=> t.id===e.shiftId || t.name===e.text || t.abbreviation===e.text);
+                    if (tmpl && Array.isArray(tmpl.timeSlots) && tmpl.timeSlots.length>0){
+                        tmpl.timeSlots.forEach(s=>{
+                            const [sh,sm]=(s.startTime||'00:00').split(':').map(Number);
+                            const [eh,em]=(s.endTime||'00:00').split(':').map(Number);
+                            let mins=(eh*60+em)-(sh*60+sm); if(mins<0) mins+=24*60; acc[key].mins+=mins;
+                        });
+                    }
+                });
+            });
+            return acc;
+        }
+
+        // Helpers globales para poblar filtros dinámicos
+        function populateIconsFromMap(map){
+            const normToDisplay=new Map();
+            Object.values(map).forEach(es=>{
+                es.filter(e=>e.type==='note' && Array.isArray(e.categories)).forEach(n=>{
+                    n.categories.forEach(c=>{ const disp=normalize(c.icon); const key=normalizeIcon(c.icon); if (key) if(!normToDisplay.has(key)) normToDisplay.set(key, disp); });
+                });
+            });
+            const sel=document.getElementById('iconPicker');
+            if (!sel) return;
+            const keepKey = normalizeIcon(sel.value);
+            const first=sel.options[0];
+            sel.innerHTML=''; sel.appendChild(first);
+            Array.from(normToDisplay.entries()).sort((a,b)=> a[1].localeCompare(b[1])).forEach(([key,disp])=>{ const opt=document.createElement('option'); opt.textContent=disp; sel.appendChild(opt); });
+            // Restaurar selección si existe
+            Array.from(sel.options).forEach(o=>{ if (normalizeIcon(o.textContent)===keepKey) sel.value=o.textContent; });
+        }
+
+        function populateShiftAndUsersFromMap(map){
+            const shifts=new Map();
+            const users=new Set();
+            Object.values(map).forEach(es=>{
+                es.forEach(ev=>{
+                    if (ev.type!=='note'){
+                        const id=ev.shiftId||''; const label=ev.text||id||'Turno';
+                        if (id || label) shifts.set(id||label, label);
+                    } else {
+                        if (ev.userId!=null) users.add(String(ev.userId));
+                    }
+                });
+            });
+            // Shifts
+            const shiftSel=document.getElementById('shiftFilter');
+            if (shiftSel){
+                const keepS=shiftSel.value; const firstS=shiftSel.options[0];
+                shiftSel.innerHTML=''; shiftSel.appendChild(firstS);
+                Array.from(shifts.entries()).sort((a,b)=> a[1].localeCompare(b[1])).forEach(([id,label])=>{
+                    const opt=document.createElement('option'); opt.value=id||label; opt.textContent=label; shiftSel.appendChild(opt);
+                });
+                if (Array.from(shifts.keys()).includes(keepS)) shiftSel.value=keepS;
+            }
+            // Users
+            const userSel=document.getElementById('userFilter');
+            if (userSel){
+                const keepU=userSel.value; const firstU=userSel.options[0];
+                userSel.innerHTML=''; userSel.appendChild(firstU);
+                if (usersIndex.size>0){
+                    Array.from(usersIndex.entries()).sort((a,b)=> String(a[1]).localeCompare(String(b[1]))).forEach(([uid,name])=>{
+                        const opt=document.createElement('option'); opt.value=String(uid); opt.textContent=name; userSel.appendChild(opt);
+                    });
+                } else {
+                    Array.from(users.values()).sort().forEach(uid=>{
+                        const name = usersIndex.get(parseInt(uid)) || `Usuario ${uid}`;
+                        const opt=document.createElement('option'); opt.value=uid; opt.textContent=name; userSel.appendChild(opt);
+                    });
+                }
+                const avail = Array.from(userSel.options).map(o=>o.value);
+                if (avail.includes(keepU)) userSel.value=keepU;
+            }
+        }
+
+        function renderStats(acc){
+            const table=document.getElementById('statsTable');
+            table.querySelectorAll('.row.data').forEach(el=>el.remove());
+            let totalCount=0, totalMins=0;
+            
+            // Inicializar todos los turnos como seleccionados si no hay selecciones previas
+            if (selectedShifts.size === 0) {
+                Object.keys(acc).forEach(key => selectedShifts.add(key));
+            }
+            
+            Object.entries(acc).forEach(([key,info])=>{
+                const tmpl = shiftTemplates.find(t=> t.id===info.sample?.shiftId || t.name===info.sample?.text || t.abbreviation===info.sample?.text);
+                const color = tmpl?.backgroundColor || tmpl?.colorHex || tmpl?.color || '#3B82F6';
+                const text = tmpl?.abbreviation || tmpl?.name || info.sample?.text || key;
+                const isSelected = selectedShifts.has(key);
+                
+                if (isSelected) {
+                    totalCount+=info.count;
+                    totalMins+=info.mins;
+                }
+                
+                const row=document.createElement('div');
+                row.className='row data';
+                row.setAttribute('data-shift-key', key);
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = isSelected;
+                checkbox.style.cursor = 'pointer';
+                checkbox.onchange = function() {
+                    if (this.checked) {
+                        selectedShifts.add(key);
+                    } else {
+                        selectedShifts.delete(key);
+                    }
+                    renderStats(acc); // Re-renderizar para actualizar el global
+                };
+                
+                const checkboxCell = document.createElement('div');
+                checkboxCell.className = 'center';
+                checkboxCell.appendChild(checkbox);
+                
+                const badgeCell = document.createElement('div');
+                badgeCell.innerHTML = `<span class="badge" style="background:${color}">${text}</span>`;
+                
+                const countCell = document.createElement('div');
+                countCell.className = 'center';
+                countCell.textContent = info.count;
+                
+                const timeCell = document.createElement('div');
+                timeCell.className = 'center';
+                timeCell.textContent = asHhMm(info.mins);
+                
+                row.appendChild(badgeCell);
+                row.appendChild(countCell);
+                row.appendChild(timeCell);
+                row.appendChild(checkboxCell);
+                
+                table.appendChild(row);
+            });
+            document.getElementById('statsGlobal').textContent=`Global: ${totalCount} Turnos ${asHhMm(totalMins)}`;
+        }
+
+        function setRange(d1,d2){
+            const f=`${d1.getDate()}/${d1.getMonth()+1}/${String(d1.getFullYear()).slice(-2)}`;
+            const t=`${d2.getDate()}/${d2.getMonth()+1}/${String(d2.getFullYear()).slice(-2)}`;
+            document.getElementById('fromChip').textContent=f;
+            document.getElementById('toChip').textContent=t;
+        }
+
+        async function refreshAll(d1,d2){
+            const key=cacheKey(d1,d2);
+            const map = await getEventsForRange(d1,d2);
+            renderNearNotes(map);
+            let acc = statsCache.get(key)?.acc;
+            if (!acc){ acc = computeStats(map); const ref=statsCache.get(key); if (ref) ref.acc=acc; }
+            // Limpiar selecciones si cambió el rango (nueva clave) y reinicializar con todos los turnos
+            const currentKey = cacheKey(d1,d2);
+            const lastKey = localStorage.getItem('lastStatsKey');
+            if (lastKey !== currentKey) {
+                selectedShifts.clear();
+                localStorage.setItem('lastStatsKey', currentKey);
+            }
+            renderStats(acc);
+            populateIconsFromMap(map);
+            populateShiftAndUsersFromMap(map);
+        }
+
+        function togglePastNext(isPast){
+            const tabPast=document.getElementById('tabPast');
+            const tabNext=document.getElementById('tabNext');
+            if (isPast) {
+                tabPast.classList.add('active');
+                tabNext.classList.remove('active');
+            } else {
+                tabNext.classList.add('active');
+                tabPast.classList.remove('active');
+            }
+            refreshAll(currentFrom,currentTo);
+        }
+
+        function activateTabs(){
+            // Los botones ya tienen onclick en el HTML, pero mantenemos compatibilidad
+            const tabPast=document.getElementById('tabPast');
+            const tabNext=document.getElementById('tabNext');
+            // Ya están configurados con onclick en HTML, así que solo refrescamos si es necesario
+
+            document.getElementById('searchBtn').onclick=()=>{
+                const q=document.getElementById('searchInput').value.trim().toLowerCase();
+                if(!q){ document.getElementById('searchResult').textContent='No hay datos para mostrar'; return; }
+                getEventsForRange(addDays(new Date(),-180), addDays(new Date(), 180)).then(map=>{
+                    const res=[]; Object.entries(map).forEach(([k,es])=>{ const note=es.find(e=>e.type==='note' && e.text?.toLowerCase().includes(q)); if(note){ res.push(`${k}: ${note.text}`);} });
+                    document.getElementById('searchResult').textContent = res.length? res.join('\n'): 'No hay datos para mostrar';
+                });
+            };
+
+            // Búsqueda por icono
+            const iconBtn=document.getElementById('iconSearchBtn');
+            const iconSel=document.getElementById('iconPicker');
+            const pastTgl=document.getElementById('pastDaysToggle');
+            async function searchByIcon(){
+                const icon = normalizeIcon(iconSel.value);
+                const shiftWanted = document.getElementById('shiftFilter').value; // shiftId o texto
+                const userWanted = document.getElementById('userFilter').value; // userId
+                const out = document.getElementById('iconSearchResult');
+                const outEmpty = document.getElementById('iconSearchResultEmpty');
+                if (!icon){ 
+                    out.style.display = 'none';
+                    outEmpty.style.display = 'block';
+                    outEmpty.textContent='Selecciona un icono para buscar'; 
+                    return; 
+                }
+                const now=new Date();
+                const from = pastTgl.checked? addDays(now,-365) : now;
+                const to = addDays(now, 365);
+                const map = await getEventsForRange(from, to);
+                const hits=[];
+                Object.entries(map).forEach(([k,es])=>{
+                    const note = es.find(e=> e.type==='note' && Array.isArray(e.categories) && e.categories.some(c=> normalizeIcon(c.icon)===icon));
+                    if (!note) return;
+                    if (userWanted && String(note.userId) !== String(userWanted)) return;
+                    if (shiftWanted){
+                        const hasShift = es.some(ev => ev.type!=='note' && (ev.shiftId===shiftWanted || ev.text===shiftWanted));
+                        if (!hasShift) return;
+                    }
+                    hits.push({dateKey: k, events: es});
+                });
+                if (hits.length===0){ 
+                    out.style.display = 'none';
+                    outEmpty.style.display = 'block';
+                    outEmpty.textContent='No se han encontrado días con el icono seleccionado'; 
+                    return; 
+                }
+                outEmpty.style.display = 'none';
+                out.style.display = 'block';
+                out.innerHTML='';
+                
+                // Ordenar por fecha
+                hits.sort((a,b)=> a.dateKey.localeCompare(b.dateKey));
+                
+                hits.forEach(({dateKey, events})=>{
+                    const dateObj = parseKey(dateKey);
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const year = String(dateObj.getFullYear()).slice(-2);
+                    const dateStr = `${day}/${month}/${year}`;
+                    
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+                    
+                    const dateDiv = document.createElement('div');
+                    dateDiv.className = 'result-date';
+                    dateDiv.textContent = dateStr;
+                    dateDiv.onclick = () => {
+                        localStorage.setItem('jump_to_date', dateKey);
+                        window.location.href = 'calendar.html';
+                    };
+                    
+                    item.appendChild(dateDiv);
+                    
+                    // Obtener todos los eventos del día (turnos, notas, eventos personalizados)
+                    const allEvents = events.filter(e => {
+                        // Incluir todos los eventos excepto notas vacías, pero mostrar notas si tienen texto
+                        return true;
+                    });
+                    
+                    // Primero mostrar turnos y eventos (no notas)
+                    const nonNoteEvents = allEvents.filter(e => e.type !== 'note');
+                    // Luego mostrar notas con texto
+                    const notesWithText = allEvents.filter(e => e.type === 'note' && e.text && e.text.trim());
+                    
+                    // Combinar: primero eventos, luego notas
+                    const displayEvents = [...nonNoteEvents, ...notesWithText];
+                    
+                    if (displayEvents.length > 0) {
+                        displayEvents.forEach(event => {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'result-event';
+                            
+                            let eventText = event.text || '';
+                            let timeStr = '';
+                            
+                            // Si el texto ya contiene una hora (formato HH:MM o H:MM), extraerla
+                            const timeInText = eventText.match(/\b(\d{1,2}):(\d{2})\b/);
+                            if (timeInText) {
+                                // El texto ya contiene la hora, usarlo directamente
+                                eventDiv.textContent = eventText;
+                                item.appendChild(eventDiv);
+                                return;
+                            }
+                            
+                            // Buscar el template del turno para obtener información
+                            const tmpl = shiftTemplates.find(t => 
+                                t.id === event.shiftId || 
+                                t.name === event.text || 
+                                t.abbreviation === event.text
+                            );
+                            
+                            // Si el evento tiene timeSlots, usar la primera hora de inicio
+                            if (tmpl && Array.isArray(tmpl.timeSlots) && tmpl.timeSlots.length > 0) {
+                                const firstSlot = tmpl.timeSlots[0];
+                                if (firstSlot.startTime) {
+                                    timeStr = firstSlot.startTime;
+                                }
+                            }
+                            
+                            // Si el evento tiene una propiedad time o startTime, usarla
+                            if (event.time) {
+                                timeStr = event.time;
+                            } else if (event.startTime) {
+                                timeStr = event.startTime;
+                            }
+                            
+                            // Formatear la hora si existe
+                            if (timeStr) {
+                                const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+                                if (timeMatch) {
+                                    const hours = parseInt(timeMatch[1]).toString().padStart(2, '0');
+                                    const minutes = timeMatch[2];
+                                    timeStr = `${hours}:${minutes}`;
+                                    eventText += (eventText ? ' ' : '') + timeStr;
+                                } else {
+                                    eventText += (eventText ? ' ' : '') + timeStr;
+                                }
+                            }
+                            
+                            eventDiv.textContent = eventText || 'Evento';
+                            item.appendChild(eventDiv);
+                        });
+                    } else {
+                        // Si no hay eventos, mostrar un mensaje genérico
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = 'result-event';
+                        eventDiv.textContent = 'Sin eventos';
+                        item.appendChild(eventDiv);
+                    }
+                    
+                    out.appendChild(item);
+                });
+            }
+            iconBtn.onclick=()=>{ saveFilters(); searchByIcon(); };
+            iconSel.onchange=()=>{ saveFilters(); searchByIcon(); };
+            pastTgl.onchange=()=>{ saveFilters(); searchByIcon(); };
+            document.getElementById('shiftFilter').onchange=()=>{ saveFilters(); searchByIcon(); };
+            document.getElementById('userFilter').onchange=()=>{ saveFilters(); searchByIcon(); };
+            document.getElementById('clearFiltersBtn').onclick=()=>{
+                const iconSel=document.getElementById('iconPicker');
+                const shiftSel=document.getElementById('shiftFilter');
+                const userSel=document.getElementById('userFilter');
+                const past=document.getElementById('pastDaysToggle');
+                if (iconSel) iconSel.value='';
+                if (shiftSel) shiftSel.value='';
+                if (userSel) userSel.value='';
+                if (past) past.checked=false;
+                saveFilters(); searchByIcon();
+            };
+
+            // Tabs de estadísticas
+            const tMonth=document.getElementById('tabMonth');
+            const tYear=document.getElementById('tabYear');
+            const tRange=document.getElementById('tabRange');
+            const rangeControls=document.getElementById('rangeControls');
+            function setActive(btn){ [tMonth,tYear,tRange].forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+            tMonth.onclick=()=>{ setActive(tMonth); rangeControls.style.visibility='visible'; setMonthRange(new Date()); refreshAll(currentFrom,currentTo); };
+            tYear.onclick=()=>{ setActive(tYear); rangeControls.style.visibility='hidden'; setYearRange(new Date()); refreshAll(currentFrom,currentTo); };
+            tRange.onclick=()=>{ setActive(tRange); rangeControls.style.visibility='visible'; };
+            function populateIconsFromMap(map){
+                const normToDisplay=new Map();
+                Object.values(map).forEach(es=>{
+                    es.filter(e=>e.type==='note' && Array.isArray(e.categories)).forEach(n=>{
+                        n.categories.forEach(c=>{ const disp=normalize(c.icon); const key=normalizeIcon(c.icon); if (key) if(!normToDisplay.has(key)) normToDisplay.set(key, disp); });
+                    });
+                });
+                const sel=document.getElementById('iconPicker');
+                const keepKey = normalizeIcon(sel.value);
+                const first=sel.options[0];
+                sel.innerHTML=''; sel.appendChild(first);
+                Array.from(normToDisplay.entries()).sort((a,b)=> a[1].localeCompare(b[1])).forEach(([key,disp])=>{ const opt=document.createElement('option'); opt.textContent=disp; sel.appendChild(opt); });
+                // Restaurar selección si existe
+                Array.from(sel.options).forEach(o=>{ if (normalizeIcon(o.textContent)===keepKey) sel.value=o.textContent; });
+            }
+
+            function populateShiftAndUsersFromMap(map){
+                const shifts=new Map();
+                const users=new Set();
+                Object.values(map).forEach(es=>{
+                    es.forEach(ev=>{
+                        if (ev.type!=='note'){
+                            const id=ev.shiftId||''; const label=ev.text||id||'Turno';
+                            if (id || label) shifts.set(id||label, label);
+                        } else {
+                            if (ev.userId!=null) users.add(String(ev.userId));
+                        }
+                    });
+                });
+                // Shifts
+                const shiftSel=document.getElementById('shiftFilter');
+                const keepS=shiftSel.value; const firstS=shiftSel.options[0];
+                shiftSel.innerHTML=''; shiftSel.appendChild(firstS);
+                Array.from(shifts.entries()).sort((a,b)=> a[1].localeCompare(b[1])).forEach(([id,label])=>{
+                    const opt=document.createElement('option'); opt.value=id||label; opt.textContent=label; shiftSel.appendChild(opt);
+                });
+                if (Array.from(shifts.keys()).includes(keepS)) shiftSel.value=keepS;
+                // Users
+                const userSel=document.getElementById('userFilter');
+                const keepU=userSel.value; const firstU=userSel.options[0];
+                userSel.innerHTML=''; userSel.appendChild(firstU);
+                // Preferir todos los usuarios conocidos en base, y en fallback usar los encontrados en notas
+                if (usersIndex.size>0){
+                    Array.from(usersIndex.entries()).sort((a,b)=> String(a[1]).localeCompare(String(b[1]))).forEach(([uid,name])=>{
+                        const opt=document.createElement('option'); opt.value=String(uid); opt.textContent=name; userSel.appendChild(opt);
+                    });
+                } else {
+                    Array.from(users.values()).sort().forEach(uid=>{
+                        const name = usersIndex.get(parseInt(uid)) || `Usuario ${uid}`;
+                        const opt=document.createElement('option'); opt.value=uid; opt.textContent=name; userSel.appendChild(opt);
+                    });
+                }
+                const avail = Array.from(userSel.options).map(o=>o.value);
+                if (avail.includes(keepU)) userSel.value=keepU;
+            }
+        }
+
+        function addDays(d,days){ const x=new Date(d); x.setDate(x.getDate()+days); return x; }
+
+        let currentFrom, currentTo;
+        function setMonthRange(base){ const from=new Date(base.getFullYear(), base.getMonth(), 1); const to=new Date(base.getFullYear(), base.getMonth()+1, 0); currentFrom=from; currentTo=to; setRange(from,to); }
+        function setYearRange(base){ const from=new Date(base.getFullYear(),0,1); const to=new Date(base.getFullYear(),11,31); currentFrom=from; currentTo=to; setRange(from,to); }
+        function initRangeMonth(){
+            const now=new Date();
+            setMonthRange(now);
+            document.getElementById('fromPrev').onclick=()=>{ const f=new Date(currentFrom); f.setMonth(f.getMonth()-1); setMonthRange(f); refreshAll(currentFrom,currentTo); };
+            document.getElementById('toNext').onclick=()=>{ const f=new Date(currentFrom); f.setMonth(f.getMonth()+1); setMonthRange(f); refreshAll(currentFrom,currentTo); };
+        }
+
+        // Aplicar tema guardado
+        function applyTheme() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('app_settings_v1')) || {};
+                const theme = settings.theme || 'system';
+                
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                    document.body.classList.remove('light-theme');
+                } else if (theme === 'light') {
+                    document.body.classList.add('light-theme');
+                    document.body.classList.remove('dark-theme');
+                } else {
+                    // Sistema - usar preferencia del navegador
+                    document.body.classList.remove('dark-theme', 'light-theme');
+                }
+            } catch (e) {
+                console.error('Error aplicando tema:', e);
+            }
+        }
+        
+        async function init(){
+            // Aplicar tema antes de todo para evitar parpadeos
+            applyTheme();
+            
+            await initFirebase();
+            await loadShiftTemplates();
+            await loadUsers();
+            activateTabs();
+            initRangeMonth();
+            await refreshAll(currentFrom,currentTo);
+            // Aplicar filtros guardados tras el primer render
+            applySavedFilters();
+        }
+
+        function saveFilters(){
+            const data={
+                icon: document.getElementById('iconPicker')?.value||'',
+                shift: document.getElementById('shiftFilter')?.value||'',
+                user: document.getElementById('userFilter')?.value||'',
+                past: !!document.getElementById('pastDaysToggle')?.checked
+            };
+            try{ localStorage.setItem(FILTERS_KEY, JSON.stringify(data)); }catch(e){}
+        }
+
+        function applySavedFilters(){
+            try{
+                const raw=localStorage.getItem(FILTERS_KEY); if(!raw) return; const f=JSON.parse(raw);
+                const iconSel=document.getElementById('iconPicker');
+                const shiftSel=document.getElementById('shiftFilter');
+                const userSel=document.getElementById('userFilter');
+                const past=document.getElementById('pastDaysToggle');
+                if (past) past.checked = !!f.past;
+                // Intenta seleccionar si la opción existe
+                function setIfExists(sel,val){ if(!sel) return; const opts=Array.from(sel.options).map(o=>o.value||o.textContent); if (opts.includes(val)) sel.value=val; }
+                setIfExists(iconSel, f.icon);
+                setIfExists(shiftSel, f.shift);
+                setIfExists(userSel, f.user);
+            }catch(e){}
+        }
+
+        // Firebase scripts
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', init);</script>
+</body>
+</html>
+
+

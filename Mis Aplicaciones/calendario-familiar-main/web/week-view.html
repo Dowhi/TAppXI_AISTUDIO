@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FamilySync">
+    <meta name="theme-color" content="#1B5E20">
+    <title>Vista Semanal - FamilySync</title>
+    <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1B5E20;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .nav-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            flex: 1;
+            text-align: center;
+        }
+
+        .view-selector {
+            background: #2196F3;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .view-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .view-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Vista de Grilla (Week Grid) */
+        .week-grid {
+            display: grid;
+            grid-template-columns: 60px repeat(7, 1fr);
+            gap: 0;
+            background: white;
+        }
+
+        .week-grid-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #f5f5f5;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .time-column {
+            background: #f5f5f5;
+            border-right: 1px solid #ddd;
+            padding: 8px;
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+        }
+
+        .day-column {
+            border-right: 1px solid #ddd;
+            padding: 4px;
+        }
+
+        .day-header {
+            background: #1B5E20;
+            color: white;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 9;
+        }
+
+        .day-header.today {
+            background: #1976D2;
+        }
+
+        .day-number {
+            font-size: 14px;
+            display: block;
+        }
+
+        .day-name {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        .time-slot {
+            border-bottom: 1px solid #f0f0f0;
+            min-height: 50px;
+            position: relative;
+        }
+
+        .event-block {
+            position: absolute;
+            width: calc(100% - 4px);
+            left: 2px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            overflow: hidden;
+            cursor: pointer;
+            z-index: 1;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .event-block.shift {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+        }
+
+        .event-block.note {
+            background: linear-gradient(135deg, #2196F3, #42A5F5);
+            color: white;
+        }
+
+        /* Vista de Lista (Agenda) */
+        .agenda-view {
+            display: none;
+        }
+
+        .agenda-view.show {
+            display: block;
+        }
+
+        .agenda-day {
+            margin-bottom: 24px;
+        }
+
+        .agenda-day-header {
+            background: white;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1B5E20;
+            border-bottom: 2px solid #1B5E20;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .agenda-day-header.today {
+            background: #1976D2;
+            color: white;
+            border-bottom-color: #1976D2;
+        }
+
+        .agenda-event {
+            background: white;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 12px;
+        }
+
+        .agenda-event:last-child {
+            border-bottom: none;
+        }
+
+        .agenda-time {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            min-width: 60px;
+        }
+
+        .agenda-content {
+            flex: 1;
+        }
+
+        .agenda-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .agenda-description {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .agenda-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .badge-shift {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .badge-note {
+            background: #E3F2FD;
+            color: #1976D2;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            background: white;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
+
+        .stats-bar {
+            background: white;
+            padding: 8px 16px;
+            border-bottom: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-btn {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+
+        .pdf-btn:hover {
+            background: #b71c1c;
+        }
+
+        .pdf-btn:active {
+            background: #9a0000;
+        }
+
+        /* Modal de vista previa PDF */
+        .pdf-preview-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .pdf-preview-backdrop.show {
+            display: flex;
+        }
+
+        .pdf-preview-modal {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .pdf-preview-header {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-preview-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .pdf-preview-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .pdf-preview-close:hover {
+            background: #f5f5f5;
+        }
+
+        .pdf-preview-content {
+            padding: 0;
+            overflow-y: auto;
+            flex: 1;
+            background: #f5f5f5;
+        }
+
+        .pdf-preview-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            padding: 12mm;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: 'Arial', sans-serif;
+            color: #333;
+        }
+
+        .pdf-preview-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 5mm;
+        }
+
+        .pdf-preview-meta {
+            font-size: 9pt;
+            color: #666;
+            margin-bottom: 5mm;
+        }
+
+        .pdf-preview-divider {
+            border-top: 0.2mm solid #000;
+            margin: 4mm 0;
+        }
+
+        .pdf-preview-day {
+            margin-bottom: 3mm;
+        }
+
+        .pdf-preview-day-header {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #1B5E20;
+            margin-bottom: 2mm;
+        }
+
+        .pdf-preview-note {
+            font-size: 8pt;
+            margin-bottom: 1mm;
+            padding-left: 0;
+        }
+
+        .pdf-preview-note-time {
+            font-weight: bold;
+            color: #424242;
+            display: inline-block;
+            width: 22mm;
+        }
+
+        .pdf-preview-note-text {
+            display: inline-block;
+            width: calc(100% - 25mm);
+        }
+
+        .pdf-preview-footer {
+            margin-top: 5mm;
+            border-top: 0.2mm solid #000;
+            padding-top: 4mm;
+            font-size: 9pt;
+            font-weight: bold;
+        }
+
+        .pdf-preview-page-footer {
+            margin-top: 5mm;
+            font-size: 7pt;
+            color: #999;
+            text-align: right;
+        }
+
+        .pdf-preview-modal-footer {
+            padding: 16px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .pdf-preview-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .pdf-preview-btn.cancel {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .pdf-preview-btn.download {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .pdf-preview-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <button class="nav-btn" onclick="goBack()" style="font-size: 16px;">◀ Volver</button>
+        <div class="header-title" id="weekTitle"></div>
+        <div style="width: 80px;"></div>
+    </div>
+    
+    <!-- Navigation Arrows -->
+    <div class="header" style="padding: 4px 12px; background: #2196F3; justify-content: center;">
+        <button class="nav-btn" onclick="previousWeek()">‹</button>
+        <div style="flex: 1;"></div>
+        <button class="nav-btn" onclick="nextWeek()">›</button>
+    </div>
+
+    <!-- View Selector -->
+    <div class="view-selector">
+        <button class="view-btn active" onclick="switchView('grid', event)">📅 Grilla</button>
+        <button class="view-btn" onclick="switchView('agenda', event)">📋 Agenda</button>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+        <span>Total: <strong id="totalEvents">0</strong> eventos</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="pdf-btn" onclick="showPdfPreview()" title="Generar PDF resumen">
+                📄 PDF
+            </button>
+            <span id="weekRange"></span>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Vista de Grilla -->
+        <div id="weekGrid" class="week-grid"></div>
+
+        <!-- Vista de Agenda -->
+        <div id="agendaView" class="agenda-view"></div>
+    </div>
+
+    <!-- Modal de Vista Previa PDF -->
+    <div id="pdfPreviewBackdrop" class="pdf-preview-backdrop" onclick="closePdfPreview()">
+        <div class="pdf-preview-modal" onclick="event.stopPropagation()">
+            <div class="pdf-preview-header">
+                <div class="pdf-preview-title">Vista Previa del Resumen</div>
+                <button class="pdf-preview-close" onclick="closePdfPreview()">×</button>
+            </div>
+            <div class="pdf-preview-content" id="pdfPreviewContent"></div>
+            <div class="pdf-preview-modal-footer">
+                <button class="pdf-preview-btn cancel" onclick="closePdfPreview()">Cancelar</button>
+                <button class="pdf-preview-btn download" onclick="downloadPdf()">Descargar PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        let db;
+        let currentWeek = new Date();
+        let events = {};
+        let currentView = 'grid';
+        let shiftTemplates = [];
+
+        function init() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                console.log('✅ Firebase inicializado');
+                
+                loadShiftTemplates();
+                loadWeekEvents();
+                db.collection('calendar_events').onSnapshot(loadWeekEvents);
+            } catch (error) {
+                console.error('❌ Error inicializando Firebase:', error);
+            }
+        }
+
+        async function loadShiftTemplates() {
+            try {
+                const snapshot = await db.collection('shifts').get();
+                shiftTemplates = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log('✅ Turnos cargados:', shiftTemplates.length);
+            } catch (error) {
+                console.error('Error cargando turnos:', error);
+            }
+        }
+
+        function switchView(view, eventObj) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (eventObj && eventObj.target) {
+                eventObj.target.classList.add('active');
+            } else {
+                // Si no hay event (llamada programática), activar el botón correcto
+                const buttons = document.querySelectorAll('.view-btn');
+                buttons.forEach((btn, index) => {
+                    if ((view === 'grid' && index === 0) || (view === 'agenda' && index === 1)) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+            
+            document.getElementById('weekGrid').style.display = view === 'grid' ? 'grid' : 'none';
+            document.getElementById('agendaView').classList.toggle('show', view === 'agenda');
+            
+            renderView();
+        }
+
+        async function loadWeekEvents() {
+            try {
+                const snapshot = await db.collection('calendar_events').get();
+                events = {};
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const dayEvents = data.events || [];
+                    events[doc.id] = dayEvents;
+                });
+                
+                renderView();
+            } catch (error) {
+                console.error('Error cargando eventos:', error);
+            }
+        }
+
+        function renderView() {
+            if (currentView === 'grid') {
+                renderGridView();
+                // Contar todos los eventos en grilla
+                updateTotalEvents(true);
+            } else {
+                renderAgendaView();
+                // El conteo ya se hace en renderAgendaView (solo notas)
+            }
+            updateWeekInfo();
+        }
+
+        function updateTotalEvents(includeShifts = false) {
+            const weekDays = getWeekDays(currentWeek);
+            let total = 0;
+            
+            weekDays.forEach(day => {
+                const dateKey = formatDateKey(day);
+                const dayEvents = events[dateKey] || [];
+                if (includeShifts) {
+                    // En grilla, contar solo eventos con hora que sean notas
+                    total += dayEvents.filter(evt => {
+                        if (!evt.time) return false;
+                        if (evt.type === 'shift' || evt.shiftId || evt.shiftName) return false;
+                        return evt.type === 'note';
+                    }).length;
+                } else {
+                    total += dayEvents.filter(evt => evt.type !== 'shift' && !evt.shiftId && !evt.shiftName).length;
+                }
+            });
+            
+            document.getElementById('totalEvents').textContent = total;
+        }
+
+        function renderGridView() {
+            const container = document.getElementById('weekGrid');
+            
+            // Calcular días de la semana
+            const weekDays = getWeekDays(currentWeek);
+            // Mostrar horas desde las 6:00 hasta las 23:00
+            const hours = Array.from({ length: 18 }, (_, i) => i + 6);
+            
+            let html = '<div class="week-grid-header"></div>';
+            
+            // Headers de días
+            weekDays.forEach(day => {
+                const isToday = isSameDay(day, new Date());
+                html += `<div class="day-header ${isToday ? 'today' : ''}">
+                    <span class="day-number">${day.getDate()}</span>
+                    <span class="day-name">${getDayName(day)}</span>
+                </div>`;
+            });
+            
+            // Filas de horas (desde las 6:00)
+            hours.forEach(hour => {
+                html += `<div class="time-column">${hour}:00</div>`;
+                
+                weekDays.forEach(day => {
+                    const dateKey = formatDateKey(day);
+                    const dayEvents = events[dateKey] || [];
+                    // Solo mostrar eventos con hora que sean notas (no turnos ni eventos de todo el día)
+                    const hourEvents = dayEvents.filter(evt => {
+                        if (!evt.time) return false;
+                        // Excluir turnos - por tipo, shiftId o shiftName
+                        if (evt.type === 'shift' || evt.shiftId || evt.shiftName) return false;
+                        // Solo mostrar notas
+                        if (evt.type !== 'note') return false;
+                        const [h] = evt.time.split(':');
+                        return parseInt(h) === hour;
+                    });
+                    
+                    html += `<div class="time-slot">
+                        ${hourEvents.map(evt => `<div class="event-block ${evt.type}" style="top: ${calculateTop(evt.time)}px">
+                            ${evt.text?.substring(0, 15) || 'Evento'}
+                        </div>`).join('')}
+                    </div>`;
+                });
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function renderAgendaView() {
+            const container = document.getElementById('agendaView');
+            const weekDays = getWeekDays(currentWeek);
+            
+            let html = '';
+            let totalEvents = 0;
+            
+            weekDays.forEach(day => {
+                const dateKey = formatDateKey(day);
+                const dayEvents = events[dateKey] || [];
+                const isToday = isSameDay(day, new Date());
+                
+                // Filtrar turnos - solo mostrar notas con hora en Agenda
+                // Excluir: turnos por tipo, shiftId, shiftName, o eventos sin hora que sean muy cortos (probablemente turnos)
+                const notesOnly = dayEvents.filter(evt => {
+                    // Excluir turnos explícitos
+                    if (evt.type === 'shift' || evt.shiftId || evt.shiftName) return false;
+                    // Solo mostrar notas
+                    if (evt.type !== 'note') return false;
+                    // Excluir eventos sin hora que sean muy cortos (probablemente abreviaciones de turnos)
+                    const text = evt.text?.trim() || '';
+                    if (!evt.time && text.length <= 3) return false;
+                    return true;
+                });
+                
+                if (notesOnly.length === 0) return;
+                
+                totalEvents += notesOnly.length;
+                
+                html += `<div class="agenda-day">
+                    <div class="agenda-day-header ${isToday ? 'today' : ''}">
+                        ${formatDayHeader(day)}
+                    </div>`;
+                
+                notesOnly.forEach(evt => {
+                    const badgeClass = 'badge-note';
+                    // Solo mostrar hora si existe, no mostrar "Todo el día"
+                    const timeDisplay = evt.time || '';
+                    
+                    // Buscar nombre completo del turno si existe
+                    let title = evt.text?.substring(0, 50) || 'Evento';
+                    
+                    html += `<div class="agenda-event">
+                        <div class="agenda-time">${timeDisplay}</div>
+                        <div class="agenda-content">
+                            <div class="agenda-title">${title}</div>
+                            ${evt.text ? `<div class="agenda-description">${evt.text.substring(0, 100)}</div>` : ''}
+                            <span class="agenda-badge ${badgeClass}">Nota</span>
+                        </div>
+                    </div>`;
+                });
+                
+                html += '</div>';
+            });
+            
+            if (html === '') {
+                html = `<div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-text">No hay notas esta semana</div>
+                </div>`;
+            }
+            
+            container.innerHTML = html;
+            document.getElementById('totalEvents').textContent = totalEvents;
+        }
+
+        function getWeekDays(weekStart) {
+            const days = [];
+            const start = new Date(weekStart);
+            start.setDate(start.getDate() - start.getDay()); // Domingo
+            
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(start);
+                day.setDate(start.getDate() + i);
+                days.push(day);
+            }
+            
+            return days;
+        }
+
+        function formatDayHeader(date) {
+            const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const isToday = isSameDay(date, new Date());
+            return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${isToday ? '• HOY' : ''}`;
+        }
+
+        function getDayName(date) {
+            const names = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            return names[date.getDay()];
+        }
+
+        function formatDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function isSameDay(d1, d2) {
+            return d1.getDate() === d2.getDate() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getFullYear() === d2.getFullYear();
+        }
+
+        function calculateTop(time) {
+            if (!time) return 0;
+            const [hours, minutes] = time.split(':');
+            // Calcular posición dentro de la fila de 50px basándonos en los minutos
+            const h = parseInt(hours);
+            const m = parseInt(minutes);
+            return (m * 50 / 60);
+        }
+
+        function previousWeek() {
+            currentWeek.setDate(currentWeek.getDate() - 7);
+            renderView();
+        }
+
+        function nextWeek() {
+            currentWeek.setDate(currentWeek.getDate() + 7);
+            renderView();
+        }
+
+        function updateWeekInfo() {
+            const weekDays = getWeekDays(currentWeek);
+            const start = weekDays[0];
+            const end = weekDays[6];
+            
+            document.getElementById('weekTitle').textContent = 
+                `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
+            
+            document.getElementById('weekRange').textContent = 
+                `Semana ${getWeekNumber(currentWeek)}`;
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+            const week1 = new Date(d.getFullYear(), 0, 4);
+            return 1 + Math.round(((d - week1) / 86400000 + week1.getDay() + 1) / 7);
+        }
+
+        function goBack() {
+            window.location.href = 'calendar.html';
+        }
+
+        function showPdfPreview() {
+            const weekDays = getWeekDays(currentWeek);
+            const start = weekDays[0];
+            const end = weekDays[6];
+            
+            // Generar contenido del resumen - usar la misma lógica de filtrado
+            let totalNotes = 0;
+            let hasContent = false;
+            
+            // Generar HTML visual que simula el PDF en A4
+            let previewHtml = '<div class="pdf-preview-page">';
+            
+            // Título
+            previewHtml += '<div class="pdf-preview-title">RESUMEN SEMANAL</div>';
+            
+            // Meta información
+            previewHtml += `<div class="pdf-preview-meta">Semana ${getWeekNumber(currentWeek)} | ${start.getDate()}/${start.getMonth()+1}/${start.getFullYear()} - ${end.getDate()}/${end.getMonth()+1}/${end.getFullYear()}</div>`;
+            
+            // Línea separadora
+            previewHtml += '<div class="pdf-preview-divider"></div>';
+            
+            // Contenido de notas - usar la misma lógica de filtrado
+            weekDays.forEach(day => {
+                const dateKey = formatDateKey(day);
+                const dayEvents = events[dateKey] || [];
+                // Mismo filtro que en renderAgendaView
+                const notesOnly = dayEvents.filter(evt => {
+                    if (evt.type === 'shift' || evt.shiftId || evt.shiftName) return false;
+                    if (evt.type !== 'note') return false;
+                    const text = evt.text?.trim() || '';
+                    if (!evt.time && text.length <= 3) return false;
+                    return true;
+                });
+                
+                if (notesOnly.length > 0) {
+                    totalNotes += notesOnly.length;
+                    hasContent = true;
+                    const dayHeader = formatDayHeader(day);
+                    previewHtml += `<div class="pdf-preview-day">`;
+                    previewHtml += `<div class="pdf-preview-day-header">${dayHeader}</div>`;
+                    
+                    notesOnly.forEach(note => {
+                        const timeDisplay = note.time || '';
+                        const title = note.text?.substring(0, 100) || 'Nota sin texto';
+                        
+                        previewHtml += '<div class="pdf-preview-note">';
+                        if (timeDisplay) {
+                            previewHtml += `<span class="pdf-preview-note-time">${timeDisplay}</span>`;
+                            previewHtml += `<span class="pdf-preview-note-text">${title}</span>`;
+                        } else {
+                            previewHtml += `<span class="pdf-preview-note-text" style="width: 100%;">${title}</span>`;
+                        }
+                        previewHtml += '</div>';
+                    });
+                    
+                    previewHtml += '</div>';
+                }
+            });
+            
+            if (!hasContent) {
+                previewHtml += '<div style="padding: 20mm 0; text-align: center; color: #999;">No hay notas en esta semana.</div>';
+            }
+            
+            // Footer
+            previewHtml += '<div class="pdf-preview-footer">Total: ' + totalNotes + ' notas</div>';
+            previewHtml += '<div class="pdf-preview-page-footer">FamilySync - ' + new Date().toLocaleDateString('es-ES') + '</div>';
+            previewHtml += '</div>';
+            
+            document.getElementById('pdfPreviewContent').innerHTML = previewHtml;
+            document.getElementById('pdfPreviewBackdrop').classList.add('show');
+        }
+
+        function closePdfPreview() {
+            document.getElementById('pdfPreviewBackdrop').classList.remove('show');
+        }
+
+        function downloadPdf() {
+            const { jsPDF } = window.jspdf;
+            // Configurar PDF en formato A4
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const weekDays = getWeekDays(currentWeek);
+            const start = weekDays[0];
+            const end = weekDays[6];
+            
+            // Configuración compacta y elegante
+            const margin = 12;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const maxWidth = pageWidth - (margin * 2);
+            let yPos = margin;
+            
+            // Título más compacto
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('RESUMEN SEMANAL', margin, yPos);
+            yPos += 5;
+            
+            // Información del período más compacta
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Semana ${getWeekNumber(currentWeek)} | ${start.getDate()}/${start.getMonth()+1}/${start.getFullYear()} - ${end.getDate()}/${end.getMonth()+1}/${end.getFullYear()}`, margin, yPos);
+            yPos += 5;
+            
+            // Línea separadora delgada
+            doc.setLineWidth(0.2);
+            doc.setTextColor(0, 0, 0);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 4;
+            
+            // Contenido de notas - usar la misma lógica de filtrado que la vista previa
+            let totalNotes = 0;
+            weekDays.forEach(day => {
+                const dateKey = formatDateKey(day);
+                const dayEvents = events[dateKey] || [];
+                // Mismo filtro que en renderAgendaView y vista previa
+                const notesOnly = dayEvents.filter(evt => {
+                    if (evt.type === 'shift' || evt.shiftId || evt.shiftName) return false;
+                    if (evt.type !== 'note') return false;
+                    const text = evt.text?.trim() || '';
+                    if (!evt.time && text.length <= 3) return false;
+                    return true;
+                });
+                
+                if (notesOnly.length > 0) {
+                    totalNotes += notesOnly.length;
+                    
+                    // Verificar si necesitamos nueva página
+                    if (yPos > pageHeight - 25) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                    
+                    // Encabezado del día más compacto
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(27, 94, 32); // Verde oscuro
+                    const dayHeader = formatDayHeader(day);
+                    doc.text(dayHeader, margin, yPos);
+                    yPos += 4;
+                    
+                    // Notas del día con diseño compacto - exactamente como en la vista previa
+                    doc.setFontSize(8);
+                    doc.setFont(undefined, 'normal');
+                    doc.setTextColor(0, 0, 0);
+                    notesOnly.forEach(note => {
+                        // Verificar si necesitamos nueva página
+                        if (yPos > pageHeight - 20) {
+                            doc.addPage();
+                            yPos = margin;
+                        }
+                        
+                        const timeDisplay = note.time || '';
+                        const title = note.text?.substring(0, 100) || 'Nota sin texto';
+                        
+                        if (timeDisplay) {
+                            doc.setFont(undefined, 'bold');
+                            doc.setTextColor(66, 66, 66);
+                            doc.text(`${timeDisplay}`, margin, yPos);
+                            doc.setFont(undefined, 'normal');
+                            doc.setTextColor(0, 0, 0);
+                            // Dividir texto largo en múltiples líneas
+                            const lines = doc.splitTextToSize(title, maxWidth - 25);
+                            doc.text(lines, margin + 22, yPos);
+                            yPos += Math.max(4, lines.length * 3.5);
+                        } else {
+                            // Dividir texto largo en múltiples líneas
+                            const lines = doc.splitTextToSize(title, maxWidth - 2);
+                            doc.text(lines, margin, yPos);
+                            yPos += Math.max(4, lines.length * 3.5);
+                        }
+                        yPos += 1; // Espacio mínimo entre notas
+                    });
+                    
+                    yPos += 3; // Espacio entre días
+                }
+            });
+            
+            // Total de notas compacto
+            if (yPos > pageHeight - 20) {
+                doc.addPage();
+                yPos = margin;
+            }
+            yPos += 3;
+            doc.setLineWidth(0.2);
+            doc.setTextColor(0, 0, 0);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 4;
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total: ${totalNotes} notas`, margin, yPos);
+            
+            // Pie de página compacto
+            yPos = pageHeight - 10;
+            doc.setFontSize(7);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(150, 150, 150);
+            doc.text(`FamilySync - ${new Date().toLocaleDateString('es-ES')}`, margin, yPos);
+            
+            // Descargar
+            const fileName = `resumen_semanal_${start.getFullYear()}${String(start.getMonth()+1).padStart(2,'0')}${String(start.getDate()).padStart(2,'0')}.pdf`;
+            doc.save(fileName);
+            
+            closePdfPreview();
+        }
+
+        init();
+    </script>
+</body>
+</html>
+

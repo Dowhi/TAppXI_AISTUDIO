@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1B5E20">
+    <title>FamilySync - Calendario Familiar</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .calendar-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .month-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        
+        .day-header {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 10px 0;
+            opacity: 0.7;
+        }
+        
+        .day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 14px;
+        }
+        
+        .day:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .day.other-month {
+            opacity: 0.3;
+        }
+        
+        .day.today {
+            background: rgba(255,255,255,0.3);
+            font-weight: bold;
+        }
+        
+        .day.selected {
+            background: rgba(255,255,255,0.5);
+            color: #1B5E20;
+        }
+        
+        .events-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .event-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .event-time {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .event-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .add-event-btn {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        
+        .add-event-btn:hover {
+            background: #45a049;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: auto;
+            padding: 20px 0;
+            opacity: 0.7;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: rgba(255,0,0,0.2);
+            border: 1px solid rgba(255,0,0,0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .retry-btn {
+            background: #FF5722;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📅</div>
+            <div class="title">FamilySync</div>
+            <div class="subtitle">Calendario Familiar</div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Cargando calendario...</div>
+        </div>
+        
+        <div id="error" class="error-message" style="display: none;">
+            <div>❌ Error de conexión</div>
+            <div style="font-size: 14px; margin-top: 10px;">
+                No se pudo conectar con Firebase. Verifica tu conexión a internet.
+            </div>
+            <button class="retry-btn" onclick="location.reload()">Reintentar</button>
+        </div>
+        
+        <div id="app" style="display: none;">
+            <div class="calendar-container">
+                <div class="month-header">
+                    <button class="nav-btn" onclick="previousMonth()">‹</button>
+                    <div class="month-title" id="monthTitle">Enero 2025</div>
+                    <button class="nav-btn" onclick="nextMonth()">›</button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendar will be generated here -->
+                </div>
+            </div>
+            
+            <div class="events-section">
+                <div class="section-title">Eventos de hoy</div>
+                <div id="todayEvents">
+                    <div class="event-item">
+                        <div class="event-time">08:00</div>
+                        <div class="event-title">Reunión familiar</div>
+                    </div>
+                    <div class="event-item">
+                        <div class="event-time">14:00</div>
+                        <div class="event-title">Cita médica</div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="add-event-btn" onclick="addEvent()">
+                + Agregar Evento
+            </button>
+        </div>
+        
+        <div class="footer">
+            <div>FamilySync v1.0</div>
+            <div>Optimizado para iOS Safari</div>
+        </div>
+    </div>
+
+    <script>
+        // Detectar iOS Safari
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        console.log('iOS Safari detectado:', isIOS && isSafari);
+        
+        // Variables globales
+        let currentDate = new Date();
+        let selectedDate = new Date();
+        
+        // Inicializar la app
+        function initApp() {
+            console.log('Inicializando FamilySync...');
+            
+            // Simular carga
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                generateCalendar();
+                loadTodayEvents();
+            }, 1500);
+        }
+        
+        // Generar calendario
+        function generateCalendar() {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const monthTitle = document.getElementById('monthTitle');
+            
+            // Limpiar grid
+            calendarGrid.innerHTML = '';
+            
+            // Headers de días
+            const dayHeaders = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            dayHeaders.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            // Título del mes
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                              'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            monthTitle.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            
+            // Obtener primer día del mes y días en el mes
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay();
+            
+            // Días del mes anterior
+            const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 0);
+            for (let i = startingDay - 1; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'day other-month';
+                day.textContent = prevMonth.getDate() - i;
+                calendarGrid.appendChild(day);
+            }
+            
+            // Días del mes actual
+            for (let i = 1; i <= daysInMonth; i++) {
+                const day = document.createElement('div');
+                day.className = 'day';
+                day.textContent = i;
+                
+                // Marcar hoy
+                const today = new Date();
+                if (i === today.getDate() && 
+                    currentDate.getMonth() === today.getMonth() && 
+                    currentDate.getFullYear() === today.getFullYear()) {
+                    day.classList.add('today');
+                }
+                
+                // Click handler
+                day.onclick = () => selectDate(i);
+                
+                calendarGrid.appendChild(day);
+            }
+            
+            // Días del mes siguiente
+            const remainingDays = 42 - (startingDay + daysInMonth);
+            for (let i = 1; i <= remainingDays; i++) {
+                const day = document.createElement('div');
+                day.className = 'day other-month';
+                day.textContent = i;
+                calendarGrid.appendChild(day);
+            }
+        }
+        
+        // Seleccionar fecha
+        function selectDate(day) {
+            // Remover selección anterior
+            document.querySelectorAll('.day.selected').forEach(d => d.classList.remove('selected'));
+            
+            // Seleccionar nuevo día
+            const days = document.querySelectorAll('.day:not(.other-month)');
+            days[day - 1].classList.add('selected');
+            
+            selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            console.log('Fecha seleccionada:', selectedDate);
+        }
+        
+        // Mes anterior
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            generateCalendar();
+        }
+        
+        // Mes siguiente
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            generateCalendar();
+        }
+        
+        // Cargar eventos de hoy
+        function loadTodayEvents() {
+            const todayEvents = document.getElementById('todayEvents');
+            // Aquí se cargarían los eventos reales desde Firebase
+            // Por ahora mostramos eventos de ejemplo
+        }
+        
+        // Agregar evento
+        function addEvent() {
+            alert('Función de agregar evento - Próximamente disponible');
+        }
+        
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', initApp);
+        
+        // Fallback para iOS Safari
+        if (isIOS && isSafari) {
+            console.log('Aplicando optimizaciones para iOS Safari');
+            
+            // Prevenir zoom
+            document.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+            });
+            
+            // Prevenir scroll horizontal
+            document.addEventListener('touchmove', function (e) {
+                if (e.scale !== 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+    </script>
+</body>
+</html>

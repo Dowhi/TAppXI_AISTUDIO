@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1B5E20">
+    <title>Notificación de Alarma</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background: #e5e5e5;
+        }
+
+        /* Header verde unificado */
+        .alarm-header {
+            background: #1B5E20;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .alarm-header-name {
+            font-size: 14px;
+            opacity: 0.9;
+            text-transform: none;
+        }
+
+        .alarm-header-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* Contenido principal */
+        .alarm-content {
+            flex: 1;
+            background: #e5e5e5;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* Reloj y fecha/hora */
+        .time-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .clock-icon {
+            width: 80px;
+            height: 80px;
+            border: 3px solid white;
+            border-radius: 50%;
+            position: relative;
+            background: transparent;
+        }
+
+        .clock-hand {
+            position: absolute;
+            background: white;
+            transform-origin: bottom center;
+        }
+
+        .clock-hand.hour {
+            width: 3px;
+            height: 25px;
+            top: 15px;
+            left: 50%;
+            margin-left: -1.5px;
+            transform: rotate(45deg);
+        }
+
+        .clock-hand.minute {
+            width: 3px;
+            height: 30px;
+            top: 10px;
+            left: 50%;
+            margin-left: -1.5px;
+            transform: rotate(90deg);
+        }
+
+        .clock-center {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .clock-marks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .clock-mark {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .date-time-box {
+            flex: 1;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-label {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .date-value {
+            font-size: 18px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .time-value {
+            font-size: 24px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        /* Sliders interactivos */
+        .alarm-slider {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .slider-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #333;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        
+        .slider-icon.bell {
+            font-size: 20px;
+        }
+
+        .slider-text {
+            flex: 1;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .slider-arrow {
+            font-size: 16px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .alarm-footer {
+            background: #2f2f2f;
+            color: white;
+            padding: 20px;
+        }
+
+        .footer-title {
+            font-size: 14px;
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }
+
+        .footer-note {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            color: #333;
+            font-size: 14px;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="alarm-header">
+        <div class="alarm-header-name" id="userName">M. Carmen:</div>
+        <div class="alarm-header-title">NOTIFICACIÓN</div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="alarm-content">
+        <!-- Reloj y fecha/hora -->
+        <div class="time-display">
+            <div class="clock-icon">
+                <div class="clock-marks">
+                    <div class="clock-mark" style="top: 5px; left: 50%; transform: translateX(-50%);"></div>
+                    <div class="clock-mark" style="top: 50%; right: 5px; transform: translateY(-50%);"></div>
+                    <div class="clock-mark" style="bottom: 5px; left: 50%; transform: translateX(-50%);"></div>
+                    <div class="clock-mark" style="top: 50%; left: 5px; transform: translateY(-50%);"></div>
+                </div>
+                <div class="clock-hand hour" id="hourHand"></div>
+                <div class="clock-hand minute" id="minuteHand"></div>
+                <div class="clock-center"></div>
+            </div>
+            <div class="date-time-box">
+                <div class="date-label">HOY:</div>
+                <div class="date-value" id="alarmDate">31/10/25</div>
+                <div class="time-value" id="alarmTime">22:12</div>
+            </div>
+        </div>
+
+        <!-- Slider para silenciar -->
+        <div class="alarm-slider" id="silenceSlider" ontouchstart="handleSliderStart(event, 'silence')" ontouchmove="handleSliderMove(event, 'silence')" ontouchend="handleSliderEnd(event, 'silence')">
+            <div class="slider-icon bell">🔕</div>
+            <div class="slider-text">Deslizar para silenciar alarma >>></div>
+            <div class="slider-arrow">▶</div>
+        </div>
+
+        <!-- Slider para salir -->
+        <div class="alarm-slider" id="exitSlider" ontouchstart="handleSliderStart(event, 'exit')" ontouchmove="handleSliderMove(event, 'exit')" ontouchend="handleSliderEnd(event, 'exit')">
+            <div class="slider-icon">✕</div>
+            <div class="slider-text">Deslizar para salir >>></div>
+            <div class="slider-arrow">▶</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="alarm-footer">
+        <div class="footer-title">Notas del día de la alarma</div>
+        <div class="footer-note" id="alarmNote">Prueba</div>
+    </div>
+
+    <script>
+        // Obtener parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const alarmDate = urlParams.get('date') || '';
+        const alarmTime = urlParams.get('time') || '';
+        const noteText = urlParams.get('note') || 'Prueba';
+        const userName = urlParams.get('user') || 'M. Carmen';
+
+        // Actualizar contenido
+        document.getElementById('userName').textContent = userName + ':';
+        
+        if (alarmDate && alarmTime) {
+            // Formatear fecha
+            const date = new Date(alarmDate + 'T' + alarmTime);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            document.getElementById('alarmDate').textContent = `${day}/${month}/${year}`;
+            
+            // Formatear hora
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            document.getElementById('alarmTime').textContent = `${hours}:${minutes}`;
+            
+            // Actualizar reloj
+            updateClock(hours, minutes);
+        } else {
+            // Usar fecha/hora actual
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = String(now.getFullYear()).slice(-2);
+            document.getElementById('alarmDate').textContent = `${day}/${month}/${year}`;
+            
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('alarmTime').textContent = `${hours}:${minutes}`;
+            
+            updateClock(hours, minutes);
+        }
+
+        document.getElementById('alarmNote').textContent = decodeURIComponent(noteText);
+
+        // Actualizar reloj analógico
+        function updateClock(hours, minutes) {
+            const hourAngle = (hours % 12) * 30 + (minutes / 60) * 30;
+            const minuteAngle = minutes * 6;
+            
+            const hourHand = document.getElementById('hourHand');
+            const minuteHand = document.getElementById('minuteHand');
+            
+            hourHand.style.transform = `rotate(${hourAngle}deg)`;
+            minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
+        }
+
+        // Variables para sliders
+        let sliderStartX = 0;
+        let sliderCurrentX = 0;
+        let isSliding = false;
+        let sliderType = '';
+
+        // Manejar inicio del deslizamiento
+        function handleSliderStart(e, type) {
+            e.preventDefault();
+            sliderType = type;
+            isSliding = true;
+            const touch = e.touches ? e.touches[0] : e;
+            sliderStartX = touch.clientX;
+            sliderCurrentX = 0;
+        }
+
+        // Manejar movimiento del deslizamiento
+        function handleSliderMove(e, type) {
+            if (!isSliding || sliderType !== type) return;
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            sliderCurrentX = touch.clientX - sliderStartX;
+            
+            const slider = document.getElementById(type + 'Slider');
+            const maxWidth = slider.offsetWidth;
+            
+            if (sliderCurrentX > 0 && sliderCurrentX <= maxWidth) {
+                slider.style.transform = `translateX(${sliderCurrentX}px)`;
+                slider.style.backgroundColor = sliderCurrentX > maxWidth * 0.7 ? '#4CAF50' : '#fff';
+            }
+        }
+
+        // Manejar fin del deslizamiento
+        function handleSliderEnd(e, type) {
+            if (!isSliding || sliderType !== type) return;
+            e.preventDefault();
+            isSliding = false;
+            
+            const slider = document.getElementById(type + 'Slider');
+            const maxWidth = slider.offsetWidth;
+            
+            if (sliderCurrentX > maxWidth * 0.7) {
+                // Acción completada
+                if (type === 'silence') {
+                    // Silenciar alarma (solo cerrar esta ventana)
+                    window.close();
+                } else if (type === 'exit') {
+                    // Salir y volver al calendario
+                    window.location.href = 'calendar.html';
+                }
+            } else {
+                // Resetear posición
+                slider.style.transform = 'translateX(0)';
+                slider.style.backgroundColor = '#fff';
+            }
+            
+            sliderCurrentX = 0;
+        }
+
+        // Reproducir sonido de alarma si es necesario
+        // (se puede agregar un audio aquí)
+    </script>
+</body>
+</html>
+

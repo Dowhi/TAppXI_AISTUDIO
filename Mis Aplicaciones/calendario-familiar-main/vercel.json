@@ -1,0 +1,38 @@
+{
+  "buildCommand": "flutter build web --release --dart-define=FLUTTER_WEB_USE_SKIA=false",
+  "outputDirectory": "build/web",
+  "framework": null,
+  "headers": [
+    {
+      "source": "/(.*\\.js|.*\\.css)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.wasm|.*\\.data)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
+
+

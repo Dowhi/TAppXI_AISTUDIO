@@ -1,0 +1,15 @@
+{"name": "ui", "description": "Reglas para UI usando Jetpack Compose.", "rules": [
+  "Usa funciones composables puras y desacopladas.",
+  "Divide UI en: screen/, components/, previews/.",
+  "Aplica Material3 y temas personalizados.",
+  "Usa Modifier con WindowInsets en lugar de hardcodear padding.",
+  "Implementa dark mode con isSystemInDarkTheme().",
+  "Usa Compose Testing para validar la UI.",
+  "Controles de filtro compactos: chips con weight(1f), espaciado reducido y sin paddings excesivos.",
+  "Gráficos: limitar a ~5 ticks en eje Y, dibujar gridlines horizontales suaves y mostrar solo valores del eje Y en color blanco.",
+  "Gráficos: evitar etiquetas densas en eje X; si se requieren, colocarlas en una fila LazyRow scrollable bajo el gráfico.",
+  "Gráficos: incluir línea de media con trazo discontinuo y leyenda sutil.",
+  "Soportar conmutador 'Ambos' para superponer series (Ingresos y Gastos) con colores del tema (primary/error).",
+  "Evitar superposición de elementos; preferir layouts con Box + Canvas para overlays.",
+  "Mantener tamaños de tarjeta y paddings contenidos para caber en vertical sin scroll innecesario."
+]}

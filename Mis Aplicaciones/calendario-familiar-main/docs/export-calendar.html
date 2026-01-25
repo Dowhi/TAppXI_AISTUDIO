@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FamilySync">
+    <meta name="theme-color" content="#1B5E20">
+    <title>Exportar Calendario - FamilySync</title>
+    <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1B5E20;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            flex: 1;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1B5E20;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #1B5E20;
+            box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.1);
+        }
+
+        .btn {
+            background: #1B5E20;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .btn:active {
+            background: #0F4C14;
+        }
+
+        .btn-secondary {
+            background: #1976D2;
+        }
+
+        .btn-google {
+            background: #4285F4;
+        }
+
+        .btn-outlook {
+            background: #0078D4;
+        }
+
+        .btn-outlook365 {
+            background: #0078D4;
+        }
+
+        .export-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-option:hover {
+            border-color: #1B5E20;
+            background: #f9f9f9;
+        }
+
+        .export-option.active {
+            border-color: #1B5E20;
+            background: #f1f8e9;
+        }
+
+        .export-icon {
+            font-size: 32px;
+        }
+
+        .export-info {
+            flex: 1;
+        }
+
+        .export-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .export-desc {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #1976D2;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .info-box-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1976D2;
+            margin-bottom: 6px;
+        }
+
+        .info-box-text {
+            font-size: 12px;
+            color: #333;
+        }
+
+        .date-range {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">◀</button>
+        <div class="header-title">📤 Exportar Calendario</div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Rango de Fechas -->
+        <div class="section">
+            <div class="section-title">Rango de Fechas</div>
+            <div class="date-range">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Desde</label>
+                    <input type="date" id="startDate" class="form-input">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" id="endDate" class="form-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="section">
+            <div class="section-title">Resumen</div>
+            <div class="stat-item">
+                <span class="stat-label">Eventos en rango:</span>
+                <span class="stat-value" id="eventCount">0</span>
+            </div>
+            <div class="stat-item" style="border-bottom: none;">
+                <span class="stat-label">Turnos en rango:</span>
+                <span class="stat-value" id="shiftCount">0</span>
+            </div>
+        </div>
+
+        <!-- Opciones de Exportación -->
+        <div class="section">
+            <div class="section-title">Formato de Exportación</div>
+            
+            <div class="export-option active" onclick="selectFormat('ics')">
+                <div class="export-icon">📅</div>
+                <div class="export-info">
+                    <div class="export-title">Archivo .ics (iCal)</div>
+                    <div class="export-desc">Compatible con Google Calendar, Outlook, Apple Calendar</div>
+                </div>
+            </div>
+
+            <div class="export-option" onclick="selectFormat('google')">
+                <div class="export-icon">📥</div>
+                <div class="export-info">
+                    <div class="export-title">Descargar y abrir Google Calendar</div>
+                    <div class="export-desc">Descarga .ics y abre Google Calendar</div>
+                </div>
+            </div>
+
+            <div class="export-option" onclick="selectFormat('outlook')">
+                <div class="export-icon">📥</div>
+                <div class="export-info">
+                    <div class="export-title">Descargar y abrir Outlook</div>
+                    <div class="export-desc">Descarga .ics y abre Outlook.com</div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 12px;">
+                <div class="info-box-title">📋 ¿Cómo importar?</div>
+                <div class="info-box-text" style="font-size: 11px; line-height: 1.5;">
+                    <strong>Google Calendar:</strong> Menú ⚙️ → "Importar y exportar" → Selecciona el archivo .ics<br>
+                    <strong>Outlook:</strong> "Agregar calendario" → "Subir desde archivo" → Selecciona el .ics<br>
+                    <strong>Apple Calendar:</strong> Doble clic en el archivo .ics descargado
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="section" style="padding-bottom: 8px;">
+            <button class="btn" id="exportBtn" onclick="exportCalendar()">
+                📥 Descargar Archivo .ics
+            </button>
+            <button class="btn btn-secondary" onclick="updateStats()">
+                🔄 Actualizar Estadísticas
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        let db;
+        let selectedFormat = 'ics';
+
+        function init() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                console.log('✅ Firebase inicializado');
+                
+                // Establecer fechas por defecto
+                const today = new Date();
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                
+                document.getElementById('startDate').value = formatDateInput(firstDay);
+                document.getElementById('endDate').value = formatDateInput(lastDay);
+                
+                updateStats();
+            } catch (error) {
+                console.error('❌ Error inicializando Firebase:', error);
+            }
+        }
+
+        function selectFormat(format) {
+            selectedFormat = format;
+            document.querySelectorAll('.export-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            event.target.closest('.export-option').classList.add('active');
+            
+            // Actualizar texto del botón
+            const btn = document.getElementById('exportBtn');
+            const formats = {
+                'ics': '📥 Descargar Archivo .ics',
+                'google': '🔗 Abrir en Google Calendar',
+                'outlook': '🔗 Abrir en Outlook'
+            };
+            btn.textContent = formats[format] || formats['ics'];
+        }
+
+        async function updateStats() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                alert('Por favor selecciona un rango de fechas');
+                return;
+            }
+
+            try {
+                const start = new Date(startDate + 'T00:00:00');
+                const end = new Date(endDate + 'T23:59:59');
+                
+                // Contar eventos
+                const eventsSnapshot = await db.collection('calendar_events').get();
+                let eventCount = 0;
+                let shiftCount = 0;
+                
+                eventsSnapshot.forEach(doc => {
+                    const dateKey = doc.id; // formato: "2025-10-31"
+                    const docDate = new Date(dateKey + 'T00:00:00');
+                    
+                    if (docDate >= start && docDate <= end) {
+                        const data = doc.data();
+                        const events = data.events || [];
+                        
+                        events.forEach(evt => {
+                            eventCount++;
+                            if (evt.type === 'shift') {
+                                shiftCount++;
+                            }
+                        });
+                    }
+                });
+                
+                document.getElementById('eventCount').textContent = eventCount;
+                document.getElementById('shiftCount').textContent = shiftCount;
+            } catch (error) {
+                console.error('Error actualizando estadísticas:', error);
+            }
+        }
+
+        async function exportCalendar() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                alert('Por favor selecciona un rango de fechas');
+                return;
+            }
+
+            try {
+                if (selectedFormat === 'ics') {
+                    await exportICS(startDate, endDate, false);
+                } else if (selectedFormat === 'google') {
+                    await exportICS(startDate, endDate, true);
+                    // Dar tiempo para descargar y luego abrir Google Calendar
+                    setTimeout(() => {
+                        window.open(`https://calendar.google.com/calendar/u/0`);
+                        alert('📥 1. Descarga el archivo .ics\n2. Abre Google Calendar\n3. Clic en "⚙️ Configuración" → "Importar y exportar"\n4. Selecciona el archivo descargado');
+                    }, 500);
+                } else if (selectedFormat === 'outlook') {
+                    await exportICS(startDate, endDate, true);
+                    setTimeout(() => {
+                        window.open('https://outlook.live.com/calendar');
+                        alert('📥 1. Descarga el archivo .ics\n2. Abre Outlook.com\n3. Clic en "Agregar calendario" → "Subir desde archivo"\n4. Selecciona el archivo descargado');
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('Error exportando:', error);
+                alert('❌ Error al exportar calendario');
+            }
+        }
+
+        async function exportICS(startDate, endDate, silent = false) {
+            try {
+                const start = new Date(startDate + 'T00:00:00');
+                const end = new Date(endDate + 'T23:59:59');
+                
+                // Obtener eventos del rango
+                const eventsSnapshot = await db.collection('calendar_events').get();
+                const events = [];
+                
+                eventsSnapshot.forEach(doc => {
+                    const dateKey = doc.id;
+                    const docDate = new Date(dateKey + 'T00:00:00');
+                    
+                    if (docDate >= start && docDate <= end) {
+                        const data = doc.data();
+                        const dayEvents = data.events || [];
+                        dayEvents.forEach(evt => {
+                            if (evt.type === 'shift' || evt.type === 'note') {
+                                const eventDate = new Date(docDate);
+                                let hasTime = false;
+                                
+                                // Si hay hora específica
+                                if (evt.time && evt.time.trim() !== '') {
+                                    const [hours, minutes] = evt.time.split(':');
+                                    if (!isNaN(hours) && !isNaN(minutes)) {
+                                        eventDate.setHours(parseInt(hours), parseInt(minutes), 0);
+                                        hasTime = true;
+                                    }
+                                }
+                                
+                                events.push({
+                                    start: eventDate,
+                                    end: hasTime ? new Date(eventDate.getTime() + 60 * 60 * 1000) : eventDate,
+                                    title: evt.shiftName || evt.text || 'Evento',
+                                    description: evt.text || '',
+                                    allDay: !hasTime
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                // Generar contenido .ics
+                let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//FamilySync//Calendario Familiar//ES
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+`;
+                
+                events.forEach(evt => {
+                    icsContent += `BEGIN:VEVENT
+UID:${generateUID()}
+DTSTAMP:${formatICSDate(new Date())}`;
+                    
+                    if (evt.allDay) {
+                        // Evento de todo el día
+                        const nextDay = new Date(evt.start);
+                        nextDay.setDate(nextDay.getDate() + 1);
+                        icsContent += `
+DTSTART;VALUE=DATE:${formatICSDateOnly(evt.start)}
+DTEND;VALUE=DATE:${formatICSDateOnly(nextDay)}`;
+                    } else {
+                        // Evento con hora específica
+                        icsContent += `
+DTSTART:${formatICSDate(evt.start)}
+DTEND:${formatICSDate(evt.end)}`;
+                    }
+                    
+                    icsContent += `
+SUMMARY:${escapeICS(evt.title)}
+${evt.description ? `DESCRIPTION:${escapeICS(evt.description)}` : ''}
+END:VEVENT
+`;
+                });
+                
+                icsContent += 'END:VCALENDAR';
+                
+                // Descargar archivo
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `calendario_familiar_${startDate}_${endDate}.ics`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                if (!silent) {
+                    alert('✅ Calendario exportado exitosamente');
+                }
+            } catch (error) {
+                console.error('Error generando .ics:', error);
+                alert('❌ Error al generar archivo .ics');
+            }
+        }
+
+        function formatICSDate(date) {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+        }
+
+        function formatICSDateOnly(date) {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}${month}${day}`;
+        }
+
+        function escapeICS(text) {
+            return text
+                .replace(/\\/g, '\\\\')
+                .replace(/;/g, '\\;')
+                .replace(/,/g, '\\,')
+                .replace(/\n/g, '\\n');
+        }
+
+        function generateUID() {
+            return Date.now() + Math.random().toString(36).substr(2, 9);
+        }
+
+        function formatDateInput(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function goBack() {
+            window.location.href = 'calendar.html';
+        }
+
+        init();
+    </script>
+</body>
+</html>
+

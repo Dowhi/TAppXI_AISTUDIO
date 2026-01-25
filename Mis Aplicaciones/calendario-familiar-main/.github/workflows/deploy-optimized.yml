@@ -1,0 +1,101 @@
+name: Deploy Optimizado
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Permite ejecución manual
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true  # Cancela despliegues anteriores si hay uno nuevo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      # 1. Checkout del código
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Historial completo para mejor caché
+        
+      # 2. Setup Flutter con caché
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: 'stable'
+          cache: true  # Caché de Flutter SDK
+          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
+          cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
+          
+      # 3. Verificar versión de Flutter
+      - name: 📊 Verificar Flutter
+        run: |
+          flutter --version
+          flutter doctor -v
+          
+      # 4. Limpiar builds anteriores
+      - name: 🧹 Limpiar builds anteriores
+        run: flutter clean
+        
+      # 5. Obtener dependencias con caché
+      - name: 📦 Obtener dependencias
+        run: flutter pub get
+        
+      # 6. Verificar que no haya errores
+      - name: 🔍 Análisis de código
+        run: flutter analyze --no-fatal-infos || true
+        
+      # 7. Build optimizado para web
+      - name: 🏗️ Build web
+        run: |
+          flutter build web \
+            --release \
+            --base-href="/FamilySync/" \
+            --dart-define=FLUTTER_WEB_USE_SKIA=false
+        
+      # 8. Optimizar archivos generados
+      - name: ⚡ Optimizar archivos
+        run: |
+          # Crear .nojekyll para GitHub Pages
+          touch build/web/.nojekyll
+          
+          # Crear archivo de versión
+          echo "Build: $(date +'%Y-%m-%d %H:%M:%S')" > build/web/version.txt
+          echo "Commit: ${{ github.sha }}" >> build/web/version.txt
+          
+      # 9. Setup GitHub Pages
+      - name: 🔧 Setup Pages
+        uses: actions/configure-pages@v4
+        
+      # 10. Upload artifact con compresión
+      - name: 📤 Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './build/web'
+          retention-days: 1  # Solo mantener 1 día (ahorra espacio)
+
+      # 11. Deploy a GitHub Pages
+      - name: 🚀 Deploy a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      # 12. Notificación de éxito
+      - name: ✅ Notificar éxito
+        if: success()
+        run: |
+          echo "✅ Despliegue exitoso!"
+          echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
+          echo "📦 Commit: ${{ github.sha }}"
+          echo "🕒 Fecha: $(date)"
+

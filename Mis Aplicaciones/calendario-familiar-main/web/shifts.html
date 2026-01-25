@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FamilySync">
+    <meta name="theme-color" content="#1B5E20">
+    <title>Turnos Disponibles - FamilySync</title>
+    <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: #f5f5f5;
+            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Header */
+        .header {
+            background: #1B5E20;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #0F4C14;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header-right {
+            width: 40px; /* Para mantener el título centrado */
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: #2a2a2a;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:active {
+            background: #3a3a3a;
+            transform: scale(0.98);
+        }
+
+        .action-btn .icon {
+            font-size: 16px;
+        }
+
+        /* Shifts List */
+        .shifts-container {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 0 20px 20px;
+        }
+
+        .shift-item {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+            cursor: move;
+            position: relative;
+        }
+
+        .shift-item:active {
+            background: #3a3a3a;
+            transform: scale(0.98);
+        }
+
+        .shift-item.dragging {
+            opacity: 0.5;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            font-size: 20px;
+            color: #888;
+            padding: 4px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .shift-color {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .shift-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .shift-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .shift-time {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .shift-options {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .shift-options:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state .title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-state .subtitle {
+            font-size: 14px;
+            color: #888;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            z-index: 1000;
+            transition: all 0.3s;
+            display: none !important;
+        }
+
+        .connection-status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: #FF9800;
+            color: white;
+        }
+
+        .connection-status.error {
+            background: #F44336;
+            color: white;
+        }
+
+        /* Menu Modal */
+        .menu-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .menu-content {
+            background: #2a2a2a;
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            animation: slideUp 0.3s;
+            max-width: 100%;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .menu-header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #444;
+            margin-bottom: 16px;
+        }
+
+        .menu-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .menu-subtitle {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-option {
+            background: #333;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-option:active {
+            background: #444;
+        }
+
+        .menu-option.danger {
+            color: #F44336;
+        }
+
+        .menu-option-icon {
+            font-size: 20px;
+        }
+        
+        /* Light Theme Updates */
+        .action-btn {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .shift-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .shift-name {
+            color: #333;
+        }
+        
+        .shift-time {
+            color: #666;
+        }
+        
+        .shifts-container {
+            background: #f5f5f5;
+        }
+        
+        .shift-options {
+            color: #333;
+        }
+        
+        .empty-state {
+            color: #999;
+        }
+        
+        /* Dark Theme */
+        body.dark-theme {
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        body.dark-theme .header {
+            background: #0D47A1;
+            border-bottom-color: #0a3470;
+        }
+        
+        body.dark-theme .action-btn {
+            background: #2a2a2a;
+            color: white;
+            border: 1px solid #333;
+        }
+        
+        body.dark-theme .shifts-container {
+            background: #0f0f0f;
+        }
+        
+        body.dark-theme .shift-item {
+            background: #2a2a2a;
+            border: 1px solid #333;
+            box-shadow: none;
+        }
+        
+        body.dark-theme .shift-name {
+            color: white;
+        }
+        
+        body.dark-theme .shift-time {
+            color: #ccc;
+        }
+        
+        body.dark-theme .shift-options {
+            color: white;
+        }
+        
+        body.dark-theme .empty-state {
+            color: #666;
+        }
+        
+        /* Auto dark mode */
+        @media (prefers-color-scheme: dark) {
+            body:not(.light-theme) {
+                background: #1a1a1a;
+                color: white;
+            }
+            
+            body:not(.light-theme) .header {
+                background: #0D47A1;
+            }
+            
+            body:not(.light-theme) .action-btn {
+                background: #2a2a2a;
+                color: white;
+                border: 1px solid #333;
+            }
+            
+            body:not(.light-theme) .shifts-container {
+                background: #0f0f0f;
+            }
+            
+            body:not(.light-theme) .shift-item {
+                background: #2a2a2a;
+                border: 1px solid #333;
+                box-shadow: none;
+            }
+            
+            body:not(.light-theme) .shift-name {
+                color: white;
+            }
+            
+            body:not(.light-theme) .shift-time {
+                color: #ccc;
+            }
+            
+            body:not(.light-theme) .shift-options {
+                color: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+
+    <!-- Header -->
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">⌄</button>
+        <div class="header-title">TURNOS DISPONIBLES</div>
+        <div class="header-right"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button class="action-btn" onclick="createShift()">
+            <span class="icon">+</span>
+            CREAR T...
+        </button>
+        <button class="action-btn" onclick="importShifts()">
+            <span class="icon">↑</span>
+            IMPORT...
+        </button>
+    </div>
+
+    <!-- Shifts List -->
+    <div class="shifts-container" id="shiftsContainer">
+        <!-- Los turnos se cargarán aquí dinámicamente -->
+    </div>
+
+    <!-- Menu Modal -->
+    <div class="menu-modal" id="menuModal" style="display: none;" onclick="closeMenuModal()">
+        <div class="menu-content" onclick="event.stopPropagation()">
+            <div class="menu-header">
+                <div class="menu-title" id="menuTitle">Opciones del Turno</div>
+                <div class="menu-subtitle" id="menuSubtitle">Selecciona una opción</div>
+            </div>
+            <div class="menu-options" id="menuOptions">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global
+        let db = null;
+        let isFirebaseConnected = false;
+        let shifts = [];
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        // Turnos predefinidos
+        // No hay turnos por defecto - solo se cargan desde Firebase
+        const defaultShifts = [];
+
+        // Aplicar tema guardado
+        function applyTheme() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('app_settings_v1')) || {};
+                const theme = settings.theme || 'system';
+                
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                    document.body.classList.remove('light-theme');
+                } else if (theme === 'light') {
+                    document.body.classList.add('light-theme');
+                    document.body.classList.remove('dark-theme');
+                } else {
+                    document.body.classList.remove('dark-theme', 'light-theme');
+                }
+            } catch (e) {
+                console.error('Error aplicando tema:', e);
+            }
+        }
+
+        // Inicializar
+        function init() {
+            console.log('🔄 Inicializando pantalla de turnos...');
+            
+            // Aplicar tema antes de todo
+            applyTheme();
+            
+            // Pequeño delay para asegurar que el DOM esté listo
+            setTimeout(() => {
+                // Intentar conectar Firebase
+                if (!initFirebase()) {
+                    
+                }
+
+                loadShifts();
+            }, 100);
+        }
+
+        
+
+        // Inicializar Firebase
+        function initFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                isFirebaseConnected = true;
+                console.log('✅ Firebase conectado correctamente');
+                
+                
+                // Configurar listener para cambios en tiempo real
+                setupRealtimeListener();
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Error conectando Firebase:', error);
+                isFirebaseConnected = false;
+                
+                return false;
+            }
+        }
+
+        // Configurar listener en tiempo real
+        function setupRealtimeListener() {
+            if (!isFirebaseConnected) return;
+            
+            db.collection('shifts').onSnapshot((snapshot) => {
+                console.log('🔄 Cambios detectados en turnos');
+                loadShifts();
+            }, (error) => {
+                console.error('❌ Error en listener de turnos:', error);
+            });
+        }
+
+        // Cargar turnos
+        async function loadShifts() {
+            if (isFirebaseConnected) {
+                try {
+                    const snapshot = await db.collection('shifts').get();
+                    shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    // Asegurar que todos los turnos tengan un campo 'order'
+                    let needsUpdate = false;
+                    shifts.forEach((shift, index) => {
+                        if (typeof shift.order === 'undefined') {
+                            shift.order = index;
+                            needsUpdate = true;
+                        }
+                    });
+                    
+                    // Si faltaban orders, guardar actualizaciones
+                    if (needsUpdate) {
+                        await saveShiftsToFirebase();
+                    }
+                    
+                    // Ordenar por el campo 'order'
+                    shifts.sort((a, b) => (a.order || 0) - (b.order || 0));
+                    
+                    if (shifts.length === 0) {
+                        // Si no hay turnos en Firebase, usar los predefinidos
+                        shifts = [...defaultShifts];
+                        await saveShiftsToFirebase();
+                    }
+                } catch (error) {
+                    console.error('❌ Error cargando turnos:', error);
+                    shifts = [...defaultShifts];
+                }
+            } else {
+                // Usar turnos predefinidos si no hay Firebase
+                shifts = [...defaultShifts];
+            }
+
+            renderShifts();
+        }
+
+        // Guardar turnos en Firebase
+        async function saveShiftsToFirebase() {
+            if (!isFirebaseConnected) return;
+
+            try {
+                for (const shift of shifts) {
+                    await db.collection('shifts').doc(shift.id).set(shift);
+                }
+                console.log('✅ Turnos guardados en Firebase');
+            } catch (error) {
+                console.error('❌ Error guardando turnos:', error);
+            }
+        }
+
+        // Renderizar turnos
+        function renderShifts() {
+            const container = document.getElementById('shiftsContainer');
+            if (!container) {
+                console.error('❌ Elemento shiftsContainer no encontrado');
+                return;
+            }
+            
+            container.innerHTML = '';
+
+            if (shifts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📅</div>
+                        <div class="title">No hay turnos</div>
+                        <div class="subtitle">Crea tu primer turno para comenzar</div>
+                    </div>
+                `;
+                return;
+            }
+
+            shifts.forEach((shift, index) => {
+                const shiftEl = document.createElement('div');
+                shiftEl.className = 'shift-item';
+                shiftEl.draggable = true;
+                shiftEl.dataset.shiftId = shift.id;
+                shiftEl.dataset.index = index;
+                
+                // Click para editar
+                shiftEl.onclick = () => editShift(shift);
+
+                // Determinar el color del turno
+                const backgroundColor = shift.backgroundColor || shift.colorHex || shift.color || '#3B82F6';
+                
+                // Determinar la hora (si hay timeSlots, usar el primero, sino usar los campos legacy)
+                let timeDisplay = '00:00 - 00:00';
+                if (shift.timeSlots && shift.timeSlots.length > 0) {
+                    const firstSlot = shift.timeSlots[0];
+                    timeDisplay = `${firstSlot.startTime || '00:00'} - ${firstSlot.endTime || '00:00'}`;
+                } else if (shift.startTime && shift.endTime) {
+                    timeDisplay = `${shift.startTime} - ${shift.endTime}`;
+                }
+
+                shiftEl.innerHTML = `
+                    <div class="drag-handle">☰</div>
+                    <div class="shift-color" style="background-color: ${backgroundColor}; color: ${shift.textColor || 'white'}; font-size: ${shift.textSize || '12'}px">
+                        ${shift.abbreviation || shift.name || 'Turno'}
+                    </div>
+                    <div class="shift-info">
+                        <div class="shift-name">${shift.name || 'Sin nombre'}</div>
+                        <div class="shift-time">${timeDisplay}</div>
+                    </div>
+                    <button class="shift-options" onclick="event.stopPropagation(); showShiftOptions('${shift.id}')">
+                        ⋮
+                    </button>
+                `;
+
+                // Event listeners para drag and drop
+                shiftEl.addEventListener('dragstart', (e) => handleDragStart(e, shiftEl));
+                shiftEl.addEventListener('dragover', (e) => handleDragOver(e, shiftEl));
+                shiftEl.addEventListener('drop', (e) => handleDrop(e, shiftEl));
+                shiftEl.addEventListener('dragend', (e) => handleDragEnd(e, shiftEl));
+
+                container.appendChild(shiftEl);
+            });
+        }
+
+        // Drag and Drop handlers
+        let draggedElement = null;
+        
+        function handleDragStart(e, element) {
+            draggedElement = element;
+            element.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', element.innerHTML);
+        }
+        
+        function handleDragOver(e, element) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+        
+        function handleDrop(e, element) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== element) {
+                const container = document.getElementById('shiftsContainer');
+                const allItems = Array.from(container.querySelectorAll('.shift-item'));
+                
+                const draggedIndex = allItems.indexOf(draggedElement);
+                const targetIndex = allItems.indexOf(element);
+                
+                // Reordenar array
+                const draggedShift = shifts[draggedIndex];
+                shifts.splice(draggedIndex, 1);
+                shifts.splice(targetIndex, 0, draggedShift);
+                
+                // Actualizar orders
+                shifts.forEach((shift, index) => {
+                    shift.order = index;
+                });
+                
+                // Guardar en Firebase
+                saveShiftsToFirebase();
+                
+                // Re-renderizar
+                renderShifts();
+            }
+            
+            return false;
+        }
+        
+        function handleDragEnd(e, element) {
+            const items = document.querySelectorAll('.shift-item');
+            items.forEach(item => {
+                item.classList.remove('dragging');
+            });
+        }
+
+        // Crear turno
+        function createShift() {
+            window.location.href = 'shift-config.html';
+        }
+
+        // Importar turnos
+        function importShifts() {
+            alert('📥 Importar Turnos\n\nPróximamente podrás:\n- Importar desde archivo CSV\n- Sincronizar con sistema externo\n- Restaurar desde backup');
+        }
+
+        // Editar turno
+        function editShift(shift) {
+            window.location.href = `shift-config.html?id=${shift.id}`;
+        }
+
+        // Mostrar opciones del turno
+        function showShiftOptions(shiftId) {
+            const shift = shifts.find(s => s.id === shiftId);
+            if (!shift) return;
+
+            const modal = document.getElementById('menuModal');
+            const menuTitle = document.getElementById('menuTitle');
+            const menuSubtitle = document.getElementById('menuSubtitle');
+            const menuOptions = document.getElementById('menuOptions');
+
+            // Configurar título y subtítulo
+            menuTitle.textContent = shift.name || 'Turno';
+            menuSubtitle.textContent = 'Selecciona una opción';
+
+            // Crear opciones del menú
+            menuOptions.innerHTML = `
+                <button class="menu-option" onclick="editShiftAction('${shiftId}')">
+                    <span class="menu-option-icon">✏️</span>
+                    <span>Editar</span>
+                </button>
+                <button class="menu-option danger" onclick="deleteShiftAction('${shiftId}')">
+                    <span class="menu-option-icon">🗑️</span>
+                    <span>Eliminar</span>
+                </button>
+                <button class="menu-option" onclick="closeMenuModal()">
+                    <span class="menu-option-icon">✕</span>
+                    <span>Cancelar</span>
+                </button>
+            `;
+
+            // Mostrar el modal
+            modal.style.display = 'flex';
+        }
+
+        // Cerrar el modal del menú
+        function closeMenuModal() {
+            const modal = document.getElementById('menuModal');
+            modal.style.display = 'none';
+        }
+
+        // Acción de editar turno (desde el menú)
+        function editShiftAction(shiftId) {
+            closeMenuModal();
+            const shift = shifts.find(s => s.id === shiftId);
+            if (shift) {
+                editShift(shift);
+            }
+        }
+
+        // Acción de eliminar turno (desde el menú)
+        function deleteShiftAction(shiftId) {
+            closeMenuModal();
+            const shift = shifts.find(s => s.id === shiftId);
+            if (shift) {
+                if (confirm(`¿Eliminar el turno "${shift.name}"?`)) {
+                    deleteShift(shiftId);
+                }
+            }
+        }
+
+        // Eliminar turno
+        async function deleteShift(shiftId) {
+            shifts = shifts.filter(s => s.id !== shiftId);
+            
+            if (isFirebaseConnected) {
+                try {
+                    await db.collection('shifts').doc(shiftId).delete();
+                    console.log('✅ Turno eliminado de Firebase');
+                } catch (error) {
+                    console.error('❌ Error eliminando turno:', error);
+                }
+            }
+
+            renderShifts();
+        }
+
+        // Volver al calendario
+        function goBack() {
+            window.location.href = 'calendar.html';
+        }
+
+        // Inicializar cuando cargue la página
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

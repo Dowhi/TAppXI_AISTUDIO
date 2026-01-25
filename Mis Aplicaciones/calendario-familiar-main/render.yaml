@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: calendario-familiar
+    env: static
+    buildCommand: flutter build web --release --dart-define=FLUTTER_WEB_USE_SKIA=false
+    staticPublishPath: build/web
+    headers:
+      - path: /*
+        name: Cross-Origin-Embedder-Policy
+        value: require-corp
+      - path: /*
+        name: Cross-Origin-Opener-Policy
+        value: same-origin
+      - path: /*.js
+        name: Cache-Control
+        value: public, max-age=31536000
+      - path: /*.css
+        name: Cache-Control
+        value: public, max-age=31536000
+
+
+

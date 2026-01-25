@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="FamilySync - Calendario familiar compartido">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1B5E20">
+  
+  <!-- Configuración específica para iOS Safari -->
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FamilySync">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  
+  <title>FamilySync</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    #loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+      text-align: center;
+    }
+    
+    .loading-content {
+      max-width: 300px;
+      padding: 20px;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .error-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    
+    .error-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .error-message {
+      font-size: 16px;
+      margin-bottom: 20px;
+      max-width: 300px;
+    }
+    
+    .error-button {
+      background: rgba(255,255,255,0.2);
+      border: 2px solid white;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      margin: 5px;
+      cursor: pointer;
+    }
+    
+    .error-button:hover {
+      background: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <h2>FamilySync</h2>
+      <p>Cargando aplicación...</p>
+    </div>
+  </div>
+
+  <div id="error-screen" class="error-screen">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Error de Compatibilidad</div>
+    <div class="error-message">
+      Problema de compatibilidad con iOS Safari. 
+      Para mejor funcionamiento, abre esta URL en Chrome:
+    </div>
+    <div style="margin: 20px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; font-family: monospace;">
+      https://dowhi.github.io/FamilySync
+    </div>
+    <a href="https://dowhi.github.io/FamilySync" class="error-button">
+      Abrir en Chrome
+    </a>
+    <button onclick="location.reload()" class="error-button">
+      Reintentar
+    </button>
+  </div>
+
+  <script>
+    // Detectar iOS Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    console.log('iOS detectado:', isIOS);
+    console.log('Safari detectado:', isSafari);
+    
+    // Configurar para iOS Safari
+    if (isIOS && isSafari) {
+      console.log('Configurando para iOS Safari');
+      
+      // Prevenir zoom
+      document.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+      });
+      
+      // Prevenir scroll problemático
+      document.addEventListener('touchmove', function (e) {
+        if (e.scale !== 1) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+    }
+    
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+      authDomain: "apptaxi-f2190.firebaseapp.com",
+      projectId: "apptaxi-f2190",
+      storageBucket: "apptaxi-f2190.firebasestorage.app",
+      messagingSenderId: "804273724178",
+      appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+      measurementId: "G-3D8R30TYTM"
+    };
+    
+    // Función para mostrar error
+    function showError() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-screen').style.display = 'flex';
+    }
+    
+    // Función para ocultar loading
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+    
+    // Timeout para mostrar error si no carga
+    setTimeout(() => {
+      if (document.getElementById('loading').style.display !== 'none') {
+        console.log('Timeout - Mostrando pantalla de error');
+        showError();
+      }
+    }, 15000);
+    
+    // Intentar cargar Flutter
+    try {
+      // Cargar Flutter bootstrap
+      const script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js';
+      script.async = true;
+      script.onload = function() {
+        console.log('Flutter bootstrap cargado');
+        // Intentar detectar cuando Flutter está listo
+        setTimeout(() => {
+          if (document.querySelector('flt-glass-pane') || 
+              document.querySelector('[data-flutter-view]') ||
+              document.querySelector('canvas')) {
+            console.log('Flutter detectado - Ocultando loading');
+            hideLoading();
+          } else {
+            console.log('Flutter no detectado - Mostrando error');
+            showError();
+          }
+        }, 5000);
+      };
+      script.onerror = function() {
+        console.log('Error cargando Flutter bootstrap');
+        showError();
+      };
+      document.head.appendChild(script);
+    } catch (error) {
+      console.error('Error inicializando Flutter:', error);
+      showError();
+    }
+    
+    // Deshabilitar service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

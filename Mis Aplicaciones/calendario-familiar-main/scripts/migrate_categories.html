@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migración de Categorías</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1B5E20;
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .info { color: #2196F3; }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Migración de Categorías</h1>
+        <p>Este script actualiza las categorías antiguas en Firebase:</p>
+        <ul>
+            <li><strong>"Ingreso"</strong> → <strong>"Pago"</strong> (💳)</li>
+            <li><strong>"Mascota"</strong> → <strong>"Cumpleaños"</strong> (🎂)</li>
+        </ul>
+        
+        <div>
+            <button class="button" onclick="runMigration()">▶ Ejecutar Migración</button>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            logDiv.innerHTML += `<div class="log-entry ${className}">${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function runMigration() {
+            log('🚀 Iniciando migración de categorías...', 'info');
+            log('📅 Fecha: ' + new Date().toLocaleString(), 'info');
+            log('='.repeat(50), 'info');
+            
+            const button = event.target;
+            button.disabled = true;
+            
+            try {
+                // Verificar conectividad
+                log('🔍 Verificando conectividad con Firebase...', 'info');
+                const testSnapshot = await db.collection('calendar_events').limit(1).get();
+                log('✅ Conexión a Firebase exitosa', 'success');
+                
+                // Migrar categorías
+                await migrateCategories();
+                
+                log('\n🎉 Migración completada exitosamente!', 'success');
+            } catch (error) {
+                log('❌ Error durante la migración: ' + error.message, 'error');
+                console.error('Error completo:', error);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function migrateCategories() {
+            log('\n🔄 Migrando categorías en calendar_events...', 'info');
+            
+            try {
+                const snapshot = await db.collection('calendar_events').get();
+                log(`📊 Documentos encontrados: ${snapshot.size}`, 'info');
+                
+                let updatedDocs = 0;
+                let totalCategories = 0;
+                
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    const events = data.events || [];
+                    
+                    if (events.length === 0) {
+                        continue;
+                    }
+                    
+                    let needsUpdate = false;
+                    const updatedEvents = [];
+                    
+                    for (const event of events) {
+                        const eventCopy = Object.assign({}, event);
+                        
+                        // Verificar si es un evento de tipo nota
+                        if (event.type === 'note') {
+                            const categories = event.categories || [];
+                            
+                            if (categories.length > 0) {
+                                const updatedCategories = [];
+                                
+                                for (const category of categories) {
+                                    const categoryCopy = Object.assign({}, category);
+                                    const categoryText = category.text;
+                                    
+                                    // Reemplazar "Ingreso" por "Pago"
+                                    if (categoryText === 'Ingreso') {
+                                        categoryCopy.text = 'Pago';
+                                        categoryCopy.icon = '💳';
+                                        needsUpdate = true;
+                                        totalCategories++;
+                                        log(`  ✏️ "Ingreso" → "Pago" en ${doc.id}`, 'success');
+                                    }
+                                    // Reemplazar "Mascota" por "Cumpleaños"
+                                    else if (categoryText === 'Mascota') {
+                                        categoryCopy.text = 'Cumpleaños';
+                                        categoryCopy.icon = '🎂';
+                                        needsUpdate = true;
+                                        totalCategories++;
+                                        log(`  ✏️ "Mascota" → "Cumpleaños" en ${doc.id}`, 'success');
+                                    }
+                                    
+                                    updatedCategories.push(categoryCopy);
+                                }
+                                
+                                eventCopy.categories = updatedCategories;
+                            }
+                        }
+                        
+                        updatedEvents.push(eventCopy);
+                    }
+                    
+                    // Actualizar el documento si hubo cambios
+                    if (needsUpdate) {
+                        await doc.ref.update({events: updatedEvents});
+                        log(`✅ Documento ${doc.id} actualizado`, 'success');
+                        updatedDocs++;
+                    }
+                }
+                
+                log('\n📈 Resumen de migración:', 'info');
+                log(`   📄 Documentos actualizados: ${updatedDocs}`, 'info');
+                log(`   🏷️ Categorías migradas: ${totalCategories}`, 'info');
+                
+            } catch (error) {
+                log('❌ Error migrando calendar_events: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        log('✅ Script de migración cargado correctamente', 'success');
+        log('💡 Haz clic en "Ejecutar Migración" para comenzar', 'info');
+    </script>
+</body>
+</html>
+

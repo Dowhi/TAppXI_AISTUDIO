@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore Backup & Restore</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border-left: 4px solid #1976D2;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .button {
+            background: #1976D2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #1565C0;
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .button-success {
+            background: #4CAF50;
+        }
+
+        .button-success:hover {
+            background: #45a049;
+        }
+
+        .button-danger {
+            background: #f44336;
+        }
+
+        .button-danger:hover {
+            background: #da190b;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .file-input {
+            margin: 15px 0;
+        }
+
+        .file-input input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .collections-list {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .collection-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #fff;
+            border-left: 3px solid #1976D2;
+            padding-left: 12px;
+        }
+
+        .progress {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .progress.show {
+            display: block;
+        }
+
+        .progress-text {
+            margin-bottom: 8px;
+            color: #1976D2;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #1976D2;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .warning strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Firestore Backup & Restore</h1>
+        <p class="subtitle">Herramienta para hacer backup y restaurar datos de Firestore</p>
+
+        <div class="warning">
+            <strong>⚠️ ADVERTENCIA IMPORTANTE:</strong>
+            <ul style="margin-left: 20px; margin-top: 8px;">
+                <li>Haz backup ANTES de modificar la estructura de la base de datos</li>
+                <li>Esta herramienta guarda TODOS los datos de TODAS las colecciones</li>
+                <li>El archivo de backup puede ser grande si tienes muchos datos</li>
+                <li>Verifica que el backup se descargó correctamente antes de borrar datos</li>
+            </ul>
+        </div>
+
+        <!-- BACKUP SECTION -->
+        <div class="section">
+            <h2>📥 Hacer Backup (Exportar Datos)</h2>
+            <p style="margin-bottom: 15px;">Exporta todas las colecciones y documentos de Firestore a un archivo JSON.</p>
+            
+            <button class="button" onclick="doBackup()" id="backupBtn">
+                🚀 Iniciar Backup Completo
+            </button>
+
+            <div class="status" id="backupStatus"></div>
+            
+            <div class="progress" id="backupProgress">
+                <div class="progress-text" id="backupProgressText">Preparando backup...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="backupProgressFill"></div>
+                </div>
+            </div>
+
+            <div id="collectionsInfo" style="display: none;">
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Colecciones encontradas:</h3>
+                <div class="collections-list" id="collectionsList"></div>
+            </div>
+        </div>
+
+        <!-- RESTORE SECTION -->
+        <div class="section">
+            <h2>📤 Restaurar Datos (Importar desde Backup)</h2>
+            <p style="margin-bottom: 15px;">Restaura los datos desde un archivo JSON de backup.</p>
+            
+            <div class="file-input">
+                <label for="restoreFile"><strong>Selecciona el archivo JSON de backup:</strong></label>
+                <input type="file" id="restoreFile" accept=".json" onchange="handleFileSelect(event)">
+            </div>
+
+            <button class="button button-success" onclick="doRestore()" id="restoreBtn" disabled>
+                ✅ Restaurar desde Backup
+            </button>
+
+            <div class="status" id="restoreStatus"></div>
+            
+            <div class="progress" id="restoreProgress">
+                <div class="progress-text" id="restoreProgressText">Preparando restauración...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="restoreProgressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PREVIEW SECTION -->
+        <div class="section">
+            <h2>👁️ Vista Previa del Backup</h2>
+            <p style="margin-bottom: 15px;">Vista previa del contenido del archivo seleccionado:</p>
+            <pre id="previewContent" style="display: none;"></pre>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+    <script>
+        // Configuración de Firebase (misma que en calendar.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let backupData = null;
+        let selectedBackupFile = null;
+
+        // Hacer backup completo
+        async function doBackup() {
+            const backupBtn = document.getElementById('backupBtn');
+            const backupStatus = document.getElementById('backupStatus');
+            const backupProgress = document.getElementById('backupProgress');
+            const backupProgressText = document.getElementById('backupProgressText');
+            const backupProgressFill = document.getElementById('backupProgressFill');
+            const collectionsList = document.getElementById('collectionsList');
+            const collectionsInfo = document.getElementById('collectionsInfo');
+
+            try {
+                backupBtn.disabled = true;
+                backupStatus.className = 'status info';
+                backupStatus.textContent = '⏳ Iniciando backup... Por favor espera.';
+                backupStatus.style.display = 'block';
+                backupProgress.classList.add('show');
+                collectionsList.innerHTML = '';
+
+                const backup = {};
+                
+                // Lista de colecciones conocidas (basada en lo que vimos en Firebase)
+                const knownCollections = [
+                    'calendar_events',
+                    'alarms',
+                    'dayCategories',
+                    'families',
+                    'local_users',
+                    'notes',
+                    'shift_templates',
+                    'shifts',
+                    'users'
+                ];
+
+                const totalCollections = knownCollections.length;
+                
+                backupProgressText.textContent = `Procesando ${totalCollections} colecciones conocidas...`;
+                backupProgressFill.style.width = '10%';
+
+                let currentCollection = 0;
+                let collectionsFound = 0;
+
+                for (const collectionName of knownCollections) {
+                    currentCollection++;
+                    
+                    backupProgressText.textContent = `Procesando colección ${currentCollection}/${totalCollections}: ${collectionName}...`;
+                    backupProgressFill.style.width = `${(currentCollection / totalCollections) * 80 + 10}%`;
+
+                    try {
+                        // Obtener todos los documentos de la colección
+                        const snapshot = await db.collection(collectionName).get();
+                        const documents = [];
+
+                        snapshot.forEach(doc => {
+                            documents.push({
+                                id: doc.id,
+                                data: doc.data()
+                            });
+                        });
+
+                        // Solo agregar colecciones que tienen documentos
+                        if (documents.length > 0) {
+                            backup[collectionName] = documents;
+                            collectionsFound++;
+                            
+                            // Agregar a la lista visual
+                            const item = document.createElement('div');
+                            item.className = 'collection-item';
+                            item.textContent = `📁 ${collectionName} (${documents.length} documentos)`;
+                            collectionsList.appendChild(item);
+                        } else {
+                            // Agregar colección vacía a la lista visual
+                            const item = document.createElement('div');
+                            item.className = 'collection-item';
+                            item.textContent = `📁 ${collectionName} (vacía)`;
+                            item.style.opacity = '0.6';
+                            collectionsList.appendChild(item);
+                        }
+                    } catch (error) {
+                        console.warn(`No se pudo acceder a la colección ${collectionName}:`, error);
+                        // Agregar colección con error a la lista visual
+                        const item = document.createElement('div');
+                        item.className = 'collection-item';
+                        item.textContent = `❌ ${collectionName} (error de acceso)`;
+                        item.style.color = '#f44336';
+                        collectionsList.appendChild(item);
+                    }
+                }
+
+                // Agregar metadatos
+                backup._metadata = {
+                    exportDate: new Date().toISOString(),
+                    totalCollections: totalCollections,
+                    collectionsFound: collectionsFound,
+                    firebaseProject: firebaseConfig.projectId
+                };
+
+                backupProgressFill.style.width = '100%';
+                backupProgressText.textContent = '✅ Backup completado!';
+
+                // Descargar archivo
+                const jsonString = JSON.stringify(backup, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `firestore_backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                backupStatus.className = 'status success';
+                backupStatus.textContent = `✅ Backup completado exitosamente! ${collectionsFound} colecciones con datos exportadas de ${totalCollections} colecciones procesadas. Archivo descargado.`;
+                collectionsInfo.style.display = 'block';
+
+                setTimeout(() => {
+                    backupProgress.classList.remove('show');
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error haciendo backup:', error);
+                backupStatus.className = 'status error';
+                backupStatus.textContent = `❌ Error haciendo backup: ${error.message}`;
+            } finally {
+                backupBtn.disabled = false;
+            }
+        }
+
+        // Manejar selección de archivo
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            selectedBackupFile = file;
+            const restoreBtn = document.getElementById('restoreBtn');
+            restoreBtn.disabled = false;
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonContent = JSON.parse(e.target.result);
+                    const previewContent = document.getElementById('previewContent');
+                    previewContent.textContent = JSON.stringify(jsonContent, null, 2);
+                    previewContent.style.display = 'block';
+                    backupData = jsonContent;
+                } catch (error) {
+                    alert('Error leyendo el archivo. Asegúrate de que sea un JSON válido.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Restaurar desde backup
+        async function doRestore() {
+            if (!selectedBackupFile) {
+                alert('Por favor selecciona un archivo de backup primero.');
+                return;
+            }
+
+            if (!confirm('⚠️ ADVERTENCIA: Esto sobrescribirá los datos existentes en Firestore. ¿Estás seguro de continuar?')) {
+                return;
+            }
+
+            if (!confirm('⚠️ CONFIRMACIÓN FINAL: Esta acción no se puede deshacer. ¿Realmente quieres continuar?')) {
+                return;
+            }
+
+            const restoreBtn = document.getElementById('restoreBtn');
+            const restoreStatus = document.getElementById('restoreStatus');
+            const restoreProgress = document.getElementById('restoreProgress');
+            const restoreProgressText = document.getElementById('restoreProgressText');
+            const restoreProgressFill = document.getElementById('restoreProgressFill');
+
+            try {
+                restoreBtn.disabled = true;
+                restoreStatus.className = 'status info';
+                restoreStatus.textContent = '⏳ Iniciando restauración... Por favor espera.';
+                restoreStatus.style.display = 'block';
+                restoreProgress.classList.add('show');
+
+                const reader = new FileReader();
+                
+                reader.onload = async function(e) {
+                    try {
+                        const backup = JSON.parse(e.target.result);
+                        
+                        // Filtrar metadatos
+                        const collections = Object.keys(backup).filter(key => key !== '_metadata');
+                        const totalCollections = collections.length;
+                        let currentCollection = 0;
+                        let totalDocs = 0;
+                        let restoredDocs = 0;
+
+                        // Contar documentos totales
+                        collections.forEach(colName => {
+                            totalDocs += backup[colName].length;
+                        });
+
+                        for (const collectionName of collections) {
+                            currentCollection++;
+                            restoreProgressText.textContent = `Restaurando colección ${currentCollection}/${totalCollections}: ${collectionName}...`;
+
+                            const documents = backup[collectionName];
+                            const collectionRef = db.collection(collectionName);
+
+                            // Borrar colección existente (opcional - comentar si quieres mantener datos existentes)
+                            // await deleteCollection(collectionName);
+
+                            // Restaurar documentos
+                            for (const doc of documents) {
+                                await collectionRef.doc(doc.id).set(doc.data());
+                                restoredDocs++;
+                                
+                                const progress = (restoredDocs / totalDocs) * 100;
+                                restoreProgressFill.style.width = `${progress}%`;
+                            }
+                        }
+
+                        restoreProgressFill.style.width = '100%';
+                        restoreProgressText.textContent = '✅ Restauración completada!';
+
+                        restoreStatus.className = 'status success';
+                        restoreStatus.textContent = `✅ Restauración completada exitosamente! ${restoredDocs} documentos en ${totalCollections} colecciones restaurados.`;
+
+                        setTimeout(() => {
+                            restoreProgress.classList.remove('show');
+                        }, 2000);
+
+                    } catch (error) {
+                        console.error('Error restaurando:', error);
+                        restoreStatus.className = 'status error';
+                        restoreStatus.textContent = `❌ Error restaurando datos: ${error.message}`;
+                    } finally {
+                        restoreBtn.disabled = false;
+                    }
+                };
+
+                reader.readAsText(selectedBackupFile);
+
+            } catch (error) {
+                console.error('Error en restauración:', error);
+                restoreStatus.className = 'status error';
+                restoreStatus.textContent = `❌ Error: ${error.message}`;
+                restoreBtn.disabled = false;
+            }
+        }
+
+        // Función auxiliar para borrar colección (usado opcionalmente en restore)
+        async function deleteCollection(collectionName) {
+            const collectionRef = db.collection(collectionName);
+            const snapshot = await collectionRef.get();
+            const batch = db.batch();
+            
+            snapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            await batch.commit();
+        }
+    </script>
+</body>
+</html>
+

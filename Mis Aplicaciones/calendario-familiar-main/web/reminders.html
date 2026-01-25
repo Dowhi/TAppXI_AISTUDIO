@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FamilySync">
+    <meta name="theme-color" content="#1B5E20">
+    <title>Recordatorios - FamilySync</title>
+    <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: #1B5E20;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            flex: 1;
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1B5E20;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #1B5E20;
+            box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.1);
+        }
+
+        .btn {
+            background: #1B5E20;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .btn:active {
+            background: #0F4C14;
+        }
+
+        .reminders-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .reminder-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .reminder-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .reminder-info {
+            flex: 1;
+        }
+
+        .reminder-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .reminder-details {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .reminder-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .btn-delete {
+            color: #f44336;
+        }
+
+        .btn-delete:active {
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .switch {
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .switch.active {
+            background: #1B5E20;
+        }
+
+        .switch-slider {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .switch.active .switch-slider {
+            left: 22px;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">◀</button>
+        <div class="header-title">📅 Recordatorios con Anticipación</div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Nueva Nota con Recordatorio -->
+        <div class="section">
+            <div class="section-title">Agregar Recordatorio</div>
+            
+            <div class="form-group">
+                <label class="form-label">Fecha del Evento</label>
+                <input type="date" id="eventDate" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Título del Recordatorio</label>
+                <input type="text" id="reminderTitle" class="form-input" placeholder="Ej: Reunión importante">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Hora del Recordatorio</label>
+                <input type="time" id="reminderTime" class="form-input">
+                <div class="info-text">Hora a la que quieres recibir el recordatorio</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Anticipación</label>
+                <select id="reminderAdvance" class="form-select">
+                    <option value="0">En el momento</option>
+                    <option value="15">15 minutos antes</option>
+                    <option value="30">30 minutos antes</option>
+                    <option value="60">1 hora antes</option>
+                    <option value="120">2 horas antes</option>
+                    <option value="1440">1 día antes</option>
+                    <option value="2880">2 días antes</option>
+                </select>
+            </div>
+
+            <button class="btn" onclick="addReminder()">➕ Agregar Recordatorio</button>
+        </div>
+
+        <!-- Lista de Recordatorios -->
+        <div class="section">
+            <div class="section-title">Recordatorios Activos</div>
+            <div class="reminders-list" id="remindersList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-text">No hay recordatorios configurados</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5vvp7IQOZLO7LlsUY_Wq-H8M_5PH3ZQE",
+            authDomain: "apptaxi-f2190.firebaseapp.com",
+            projectId: "apptaxi-f2190",
+            storageBucket: "apptaxi-f2190.firebasestorage.app",
+            messagingSenderId: "804273724178",
+            appId: "1:804273724178:web:c5955a1f657884c0e7f1cb",
+            measurementId: "G-3D8R30TYTM"
+        };
+
+        let db;
+        let reminders = [];
+
+        // Inicializar Firebase
+        function init() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                console.log('✅ Firebase inicializado');
+                loadReminders();
+            } catch (error) {
+                console.error('❌ Error inicializando Firebase:', error);
+            }
+        }
+
+        // Cargar recordatorios
+        async function loadReminders() {
+            try {
+                const snapshot = await db.collection('reminders')
+                    .orderBy('scheduledTime', 'desc')
+                    .get();
+                
+                reminders = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                renderReminders();
+            } catch (error) {
+                console.error('Error cargando recordatorios:', error);
+            }
+        }
+
+        // Renderizar recordatorios
+        function renderReminders() {
+            const container = document.getElementById('remindersList');
+            
+            if (reminders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">No hay recordatorios configurados</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = reminders.map(reminder => {
+                const scheduledDate = reminder.scheduledTime.toDate();
+                const eventDate = reminder.eventDate.toDate();
+                
+                return `
+                    <div class="reminder-item">
+                        <div class="reminder-info">
+                            <div class="reminder-title">${reminder.title}</div>
+                            <div class="reminder-details">
+                                📅 ${formatDate(eventDate)} | 🔔 ${formatTime(scheduledDate)} | ⏰ ${getAdvanceText(reminder.advanceMinutes)}
+                            </div>
+                        </div>
+                        <div class="reminder-actions">
+                            <button class="btn-icon btn-delete" onclick="deleteReminder('${reminder.id}')">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Agregar recordatorio
+        async function addReminder() {
+            const eventDate = document.getElementById('eventDate').value;
+            const title = document.getElementById('reminderTitle').value;
+            const time = document.getElementById('reminderTime').value;
+            const advance = parseInt(document.getElementById('reminderAdvance').value);
+
+            if (!eventDate || !title || !time) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            try {
+                // Calcular hora programada
+                const eventDateTime = new Date(`${eventDate}T${time}`);
+                const scheduledTime = new Date(eventDateTime.getTime() - (advance * 60000));
+
+                // Verificar que no sea en el pasado
+                if (scheduledTime < new Date()) {
+                    alert('No se pueden programar recordatorios en el pasado');
+                    return;
+                }
+
+                await db.collection('reminders').add({
+                    title: title,
+                    eventDate: firebase.firestore.Timestamp.fromDate(new Date(`${eventDate}T${time}`)),
+                    scheduledTime: firebase.firestore.Timestamp.fromDate(scheduledTime),
+                    advanceMinutes: advance,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Limpiar formulario
+                document.getElementById('eventDate').value = '';
+                document.getElementById('reminderTitle').value = '';
+                document.getElementById('reminderTime').value = '';
+                document.getElementById('reminderAdvance').value = '0';
+
+                // Recargar lista
+                loadReminders();
+
+                alert('✅ Recordatorio agregado exitosamente');
+            } catch (error) {
+                console.error('Error agregando recordatorio:', error);
+                alert('❌ Error al agregar recordatorio');
+            }
+        }
+
+        // Eliminar recordatorio
+        async function deleteReminder(id) {
+            if (!confirm('¿Eliminar este recordatorio?')) return;
+
+            try {
+                await db.collection('reminders').doc(id).delete();
+                loadReminders();
+            } catch (error) {
+                console.error('Error eliminando recordatorio:', error);
+                alert('❌ Error al eliminar recordatorio');
+            }
+        }
+
+        // Funciones de utilidad
+        function formatDate(date) {
+            return date.toLocaleDateString('es-ES', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric' 
+            });
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        function getAdvanceText(minutes) {
+            if (minutes === 0) return 'En el momento';
+            if (minutes < 60) return `${minutes} min antes`;
+            if (minutes < 1440) return `${Math.floor(minutes / 60)}h antes`;
+            return `${Math.floor(minutes / 1440)} días antes`;
+        }
+
+        function goBack() {
+            window.location.href = 'calendar.html';
+        }
+
+        // Inicializar al cargar
+        init();
+    </script>
+</body>
+</html>
+
